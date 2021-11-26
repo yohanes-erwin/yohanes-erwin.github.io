@@ -7,7 +7,7 @@ version: 2
 
 # Personal info
 name: Erwin Setiawan
-title: FPGA/SoC Engineer
+title: FPGA Engineer
 email: erwin.setiawan789@gmail.com
 website: klinikarduino.github.io
 
@@ -91,11 +91,44 @@ content:
     layout: list # Type of content section (list/text)
     content:
       - layout: left
-        title: PT. Inova Medika Solusindo
+        title: Microelectronics Center, Bandung, Indonesia
+        # link: inovamedika.com
+        # link_text: boringcompany.com
+        sub_title: FPGA Engineer
+        caption: Nov 2017 - present
+        # quote: >
+          # Solving 21st century problems by diging holes and making game changing products like the *not a flamethrower*
+        description: | # this will include new lines to allow paragraphs
+            - Designed OFDM-based baseband processor for LiFi (VLC) and RF transceiver system on FPGA.
+            - Designed Linux kernel module/driver for OFDM PHY.
+            - Hands-on experience with ZYNQ FPGA, AXI4 bus, embedded Linux, Verilog, C/C++, MATLAB.
+            - Hands-on experience with signal generator, oscilloscope, spectrum analyzer.
+      - layout: left
+        title: Self Employed
+        # link: inovamedika.com
+        # link_text: boringcompany.com
+        sub_title: Self Employed
+        caption: Jan 2014 - present
+        # quote: >
+          # Solving 21st century problems by diging holes and making game changing products like the *not a flamethrower*
+        description: | # this will include new lines to allow paragraphs
+            Writing articles, e-books, and video courses.
+      - layout: left
+        title: Institute for Digital Communications, The University of Edinburgh, U.K.
+        # link: inovamedika.com
+        # link_text: boringcompany.com
+        sub_title: Research Intern
+        caption: Jun 2019 (1 mo)
+        # quote: >
+          # Solving 21st century problems by diging holes and making game changing products like the *not a flamethrower*
+        description: | # this will include new lines to allow paragraphs
+            The research intern is done in Li-Fi Research and Development Centre under the supervision of Dr. Wasiu O. Popoola. The research topic is about system integration between baseband processor and Li-Fi (VLC) analog optical front-end.
+      - layout: left
+        title: PT. Inova Medika Solusindo, Bandung, Indonesia
         link: inovamedika.com
         # link_text: boringcompany.com
         sub_title: R&D Engineer
-        caption: Dec 2014 - Feb 2016
+        caption: Dec 2014 - Feb 2016 (1 yr. 2 mos)
         # quote: >
           # Solving 21st century problems by diging holes and making game changing products like the *not a flamethrower*
         description: | # this will include new lines to allow paragraphs
