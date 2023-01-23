@@ -1,0 +1,110 @@
+<head>
+    <meta charset="utf-8" lang="en">
+    <link rel="icon" href="../../logo.png">
+    <style class="fallback">
+    body {
+        visibility: hidden;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    </style>
+</head> 
+<body>
+    **Pengontrolan LED Melalui Komunikasi Serial**
+    **Instagram: [@klinikarduino](https://www.instagram.com/klinikarduino/)**
+    **Facebook: [@klinikarduino](https://web.facebook.com/klinikarduino)**
+    **by [Erwin Setiawan](https://yohanes-erwin.github.io/)**
+    
+    <center>**[Pemrograman Arduino](../index.html)**</center>
+
+    Contoh Program
+    ===========================
+    Pada contoh program ini, kita akan mempelajari contoh penggunaan komunikasi serial untuk melakukan pengontrolan LED.
+    Tujuan program ini yaitu agar dapat menyalakan dan mematikan LED dari PC, serta mengetahui kondisi LED saat ini.
+
+    Untuk dapat menjalankan contoh program ini diperlukan beberapa komponen:
+    * Development board ESP32
+    * 1 buah LED
+    * 1 buah resistor 100Ω
+    * Breadboard
+    * Kabel jumper
+
+    Ilustrasi koneksi dari komponen-komponen ke ESP32 ditampilkan pada Figure [fig:serial-led-control-bb].
+    Pin yang digunakan untuk menghubungkan komponen-komponen ke ESP32 ditampilkan pada Table [tab:wiring].
+    LED tersebut menggunakan rangkaian active-low.
+
+    ![Figure [fig:serial-led-control-bb]: Rangkaian breadboard untuk program pengontrolan LED dengan komunikasi serial](serial-led-control-bb.jpg width=400px)
+
+
+    Sensor/Aktuator Pin     | ESP32 Pin
+    ------------------------|------------------
+    LED merah               | D25
+    [Table [tab:wiring]: Koneksi ESP32]
+
+    Listing [lst:serial_led] menampilkan contoh program pengontrolan LED dengan komunikasi serial.
+    Berikut ini penjelasan cara kerja program tersebut:
+    * Pada **line 2**, kita melakukan definisi pin untuk LED.
+    * Pada **line 7**, kita melakukan konfigurasi serial monitor.
+    * Pada **line 10-13**, kita melakukan konfigurasi GPIO untuk LED, kemudian mengatur nilai awal LED ke kondisi mati.
+    * Pada **line 19**, kita melakukan pengecekan buffer serial dengan fungsi `available`. Jika ada data yang diterima, maka isi fungsi `if` ini akan dijalankan.
+    * Pada **line 22**, kita membaca perintah dari receive buffer sampai karakter newline. Ada tiga perintah yang dapat digunakan yaitu `LED_ON`, `LED_OFF`, dan `LED`.
+    * Pada **line 25-32**, kita memproses perintah `LED_ON` untuk menyalakan LED dan `LED_OFF` untuk mematikan LED.
+    * Pada **line 33-36**, kita membaca nilai GPIO LED saat ini dengan fungsi `digitalRead`, kemudian mengirimkan hasil pembacaannya ke PC melalui komunikasi serial. Di sini kita menggunakan ternary operator (?:) untuk mengirimkan nilai `OFF` atau `ON`. Ternary operator memiliki fungsi yang sama seperti fungsi `if`.
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C linenumbers
+    // LED pin
+    #define RED_LED_PIN     25
+
+    void setup()
+    {
+      // Konfigurasi komunikasi serial
+      Serial.begin(9600);
+
+      // Konfigurasi GPIO pin sebagai output untuk LED
+      pinMode(RED_LED_PIN, OUTPUT);
+      
+      // Set nilai LED ke kondisi off
+      digitalWrite(RED_LED_PIN, HIGH);
+    }
+
+    void loop()
+    {
+      // Jika ada data di receive buffer
+      if (Serial.available() > 0)
+      {
+        // Baca perintah dari receive buffer sampai karakter newline
+        String cmd = Serial.readStringUntil('\n');
+
+        // Proses perintah tersebut
+        if (cmd == "LED_ON")
+        {
+          digitalWrite(RED_LED_PIN, LOW);
+        }
+        else if (cmd == "LED_OFF")
+        {
+          digitalWrite(RED_LED_PIN, HIGH);      
+        }
+        else if (cmd == "LED")
+        {
+          Serial.printf("LED is %s\n", ((digitalRead(RED_LED_PIN) == HIGH) ? "OFF" : "ON"));
+        }
+      }
+    }
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [lst:serial_led]: Contoh program pengontrolan LED dengan komunikasi serial]
+
+    Figure [fig:serial-led-control-2] menampilkan hasil program pengontrolan LED dengan komunikasi serial.
+    LED akan menyala ketika dari serial monitor dikirim perintah `LED_ON`.
+    Sebaliknya, LED akan mati ketika dari serial monitor dikirim perintah `LED_OFF`.
+    Ketika perintah `LED` digunakan, maka status LED saat ini akan dikirimkan ke serial monitor oleh ESP32.
+
+    ![Figure [fig:serial-led-control-2]: Pengontrolan LED dengan komunikasi serial](serial-led-control-2.gif width=640px)
+
+    Repository Kode Program
+    ===========================
+    Kode program untuk pengontrolan LED dengan komunikasi serial dapat didapatkan di repository ini: [serial-led-control](https://github.com/klinikarduino/esp32/tree/main/serial-led-control).
+
+    <link href='https://fonts.googleapis.com/css?family=Roboto:400,300,100,100italic,300italic,400italic,700' rel='stylesheet' type='text/css'>
+    <script>window.markdeepOptions = {'tocStyle':'long'};</script>
+    <script src="../../markdeep.min.js"></script>
+    <script>window.alreadyProcessedMarkdeep||(document.body.style.visibility="visible")</script>
+</body>

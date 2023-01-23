@@ -1,0 +1,113 @@
+<head>
+    <meta charset="utf-8" lang="en">
+    <link rel="icon" href="../../logo.png">
+    <style class="fallback">
+    body {
+        visibility: hidden;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    </style>
+</head> 
+<body>
+    **Bab 1 Pengenalan Mikrokontroler**
+    **Instagram: [@klinikarduino](https://www.instagram.com/klinikarduino/)**
+    **Facebook: [@klinikarduino](https://web.facebook.com/klinikarduino)**
+    **by [Erwin Setiawan](https://yohanes-erwin.github.io/)**
+    
+    <center>**[Pemrograman Arduino](../index.html)**</center>
+
+    Apa itu Mikrokontroler?
+    ===========================
+    Mikrokontroler merupakan sebuah integrated circuit (IC) yang di dalamnya terdapat sistem komputer lengkap.
+    Mikrokontroler berbeda dengan mikroprosesor yang bisa kita temui pada PC (misalnya mikroprosesor Intel),
+    karena pada sebuah mikrokontroler sudah terdapat perangkat pendukung sebuah sistem komputer yaitu memori dan peripheral I/O,
+    sedangkan di dalam mikroprosesor hanya berisi CPU saja.
+
+    ![Figure [fig:atmega8]: Sebuah mikrokontroler ATmega8 yang terpasang pada board Arduino Uno. Sumber: [Wikipedia](https://id.wikipedia.org/wiki/Pengendali_mikro)](arduino_avr_atmega8.jpg width=300px)
+    
+    Pada Figure [fig:atmega8], terlihat sebuah contoh mikrokontroler ATmega8 yang terpasang pada board Arduino Uno.
+    Mikrokontroler ini dibuat oleh Atmel, memiliki kemampuan 8-bit, dan bekerja pada kecepatan maksimal 16 MHz.
+
+    Mikrokontroler digunakan pada berbagai macam aplikasi. Pada hampir semua alat elektronik, setidaknya ada satu atau lebih mikrokontroler
+    di dalamnya. Berikut ini beberapa contoh alat-alat elektronik yang setidaknya ada satu atau lebih mikrokontroler di dalamnya:
+    - Peralatan rumah tangga: TV, AC, lemari es, oven microwave.
+    - Gadget: PC, laptop, smartphone, console game.
+    - Alat medis: mesin X-ray, CT scan.
+    - Robotik: drone, robot arm, robot humanoid.
+    - Automotive: motor, mobil.
+    - Avionik: pesawat terbang, roket luar angkasa, satelit.
+
+    ![Figure [fig:block_mcu]: Block diagram umum sebuah mikrokontroler. Sumber: [Wikipedia](https://en.wikipedia.org/wiki/System_bus)](computer_system.png width=400px)
+
+    Pada Figure [fig:block_mcu], terlihat blok diagram umum sebuah mikrokontroler. Di dalam sebuah mikrokontroler terdapat tiga blok utama yaitu CPU, memori, dan input/output (I/O). CPU berfungsi untuk melakukan eksekusi program. memori berfungsi untuk menyimpan data. I/O berfungsi untuk berinteraksi dengan komponen eksternal. Ketiga blok utama tersebut terhubung dengan sebuah system bus.
+    
+    System bus terdiri dari tiga bagian yaitu control bus, address bus, dan data bus. Control bus melewatkan singal control dari CPU ke memori dan I/O. Address bus berfungsi untuk melewatkan alamat memori atau I/O. Data bus berfungsi untuk melewatkan sinyal data yang
+    ditransfer antara CPU ke memori dan I/O atau sebaliknya. Dengan ketiga bus tersebut, maka CPU dapat berkomunikasi dengan memori dan I/O.
+	
+    Ada banyak perusahaan yang membuat mikrokontroler. Beberapa diantaranya yaitu Atmel, Infineon, Microchip Technology, STMicroelectronics, Texas Instruments, NXP Semiconductors, Espressif Systems, dll.
+
+    ![Figure [fig:contoh_mikro]: Contoh mikrokontroler dari beberapa perusahaan: Atmel (kiri), STMicroelectronics (tengah), Espressif Systems (kanan)](contoh_mikro.png width=600px)
+
+    Pada Figure [fig:contoh_mikro], terlihat contoh mikrokontroler dari beberapa perusahaan. Mikrokontroler tersebut cukup populer dan banyak digunakan oleh pelajar, hobbyist, ataupun professional.
+
+    Perbedaan Mikrokontroler dengan Mikroprosesor
+    ===========================
+    ![Figure [fig:mcu_cpu]: Mikrokontroler berbeda dengan mikroprosesor. Mikrokontroler ATmega328p (kiri) dan mikroprosesor Intel Core i5 (kanan)](mcu_vs_cpu.png width=600px)
+
+    Mikrokontroler berbeda dengan mikroprosesor. Di dalam sebuah mikroprosesor hanya ada prosesor atau disebut juga sebagai central processing unit (CPU), tanpa memori, dan tanpa peripheral I/O.
+    Contoh mikroprosesor yang paling banyak kita kenal yaitu prosesor Intel (Core i3, i5, i7, dll) dan AMD (Ryzen 3, 5, 7, dll).
+    
+    Prosesor-prosesor tersebut digunakan untuk aplikasi umum (general purpose, contohnya membuat dokumen, browsing, game, design, dll) dan membutuhkan konsumsi daya kira-kira >30W.
+    Untuk membuat sistem yang berjalan dengan prosesor-prosesor tersebut, kita membutuhkan memori eksternal yang berada di luar IC mikroprosesor tersebut (sebagai modul RAM yang dipasang di motherboard).
+    Sedangkan peripheral I/O-nya sendiri biasanya ada pada motherboard.
+
+    Sedangkan pada sebuah mikrokontroler, sudah terdapat memori dan peripheral I/O yang berada di dalam IC mikrokontroler tersebut.
+    Sehingga kita tidak membutuhkan memori eksternal lagi. Peripheral I/O yang umum digunakan juga sudah ada di dalam mikrokontroler tersebut. 
+    Walaupun demikian, ukuran memorinya jauh lebih kecil dan peripheral I/O-nya juga terbatas. 
+    
+    Berbeda dengan mikroprosesor Intel atau AMD, mikrokontroler biasanya digunakan untuk aplikasi yang spesifik dan memiliki konsumsi daya yang relatif lebih rendah.
+    Contohnya, mikrokontroler pada oven microwave hanya digunakan untuk melakukan kontrol oven microwave tersebut, tidak bisa digunakan untuk, misalnya, mendengarkan musik.
+
+    Mengapa tidak semua alat-alat elektronik seperti oven microwave, lemari es, atau televisi menggunakan mikroprosesor Intel atau AMD?
+    Hal itu tidak dilakukan karena alat-alat tersebut tidak membutuhkan computation power yang besar, serta untuk menghemat konsumsi daya listrik juga.
+    Prosesor untuk general purpose memiliki kecepatan clock yang tinggi biasanya dalam satuan GHz, sehingga computation power-nya besar dan konsumsi dayanya juga besar.
+    Sedangkan prosesor untuk mikrokontroler memiliki kecepatan clock yang rendah biasanya dalam satuan MHz, sehingga computation power-nya dan konsumsi dayanya juga lebih rendah.
+
+    Perdedaan antara mikrokontroler dan mikroprosesor dirangkum pada Table [tab:mcu_cpu] di bawah ini:
+
+    Parameter         | Mikrokontroler                                      | Mikroprosesor
+    ------------------|-----------------------------------------------------|----------------------------------------------------
+    Aplikasi          | Spesifik (oven microwave, lemari es, televisi, dll) | Umum (membuat dokumen, browsing, game, design, dll)
+    Struktur          | Memori dan peripheral I/O terintegrasi di dalam IC  | Membutuhkan memori dan peripheral I/O eksternal
+    Processing power  | Rendah                                              | Tinggi
+    Power consumption | Rendah                                              | Tinggi
+    [Table [tab:mcu_cpu]: Perdedaan antara mikrokontroler dan mikroprosesor]
+
+    Bagaimana Bagian Dalam Sebuah IC?
+    ===========================
+    Sebuah IC terbuat dari bahan semikonduktor. Bahan semikonduktor yang paling sering digunakan yaitu silikon.
+    Figure [fig:bagian_dalam_ic] merupakan bagian dalam dari sebuah IC. Die merupakan material silikon tempat transistor-transistor difabrikasi.
+    Package merupakan material epoxy resin yang berfungsi untuk melindungi bagian dalam IC. Wire bond berfungsi untuk menghubungkan die dengan pin, dan pin berfungsi untuk menghubungkan IC tersebut dengan komponen eksternal.
+
+    ![Figure [fig:bagian_dalam_ic]: Bagian dalam dari sebuah IC. Sumber: [SparkFun](https://learn.sparkfun.com/tutorials/integrated-circuits/inside-the-ic)](bagian_dalam_ic.png width=400px)
+
+    Transistor-transistor tersebut dihubungkan satu sama lain dengan interkoneksi dari material tembaga untuk membentuk suatu blok yang lebih kompleks seperti CPU, memori, dan sebagainya.
+    Dalam sebuah IC bisa terdapat ribuan sampai miliaran transistor tergantung dari jenis IC-nya. Figure [fig:die_zoom] merupakan bagian dari die yang diperbesar. Pada gambar tersebut dapat terlihat wire bond serta interkoneksi yang menghubungkan transistor.
+
+    ![Figure [fig:die_zoom]: Bagian die yang diperbesar. Sumber: [SparkFun](https://learn.sparkfun.com/tutorials/integrated-circuits/inside-the-ic)](die_zoom.jpg width=400px)
+
+    Pada Figure [fig:cross_section_ic], dapat terlihat sebuah die yang dipotong melintang. Terlihat bagian interkoneksi yang terbuat dari metal, transistor, dan bulk silicon. Jenis transistor yang biasa digunakan pada IC digital yaitu transistor MOSFET. Bulk silicon menjadi bagian dasar tempat transistor dibuat.
+
+    ![Figure [fig:cross_section_ic]: Potongan melintang dari sebuah die. Sumber: [SparkFun](https://learn.sparkfun.com/tutorials/integrated-circuits/inside-the-ic)](cross_section_ic.png width=500px)
+
+    Jika bagian cross section dari sebuah transistor MOSFET diperbesar, maka akan terlihat seperti pada Figure [fig:cross_section_transistor].
+    Terlihat bagian utama dari transistor MOSFET yaitu source, drain, dan gate. Semakin kecil panjang gate-nya, maka ukuran keseluruhan 
+    sebuah transistor akan lebih kecil, sehingga jumlah transistor dalam ukuran die yang sama bisa menjadi lebih banyak. Hukum Moore menyatakan bahwa jumlah transistor dalam sebuah IC akan meningkat dua kali lipat setiap dua tahun sekali.
+
+    ![Figure [fig:cross_section_transistor]: Potongan melintang dari sebuah transistor MOSFET](cross_section_transistor.png width=250px)
+
+    <link href='https://fonts.googleapis.com/css?family=Roboto:400,300,100,100italic,300italic,400italic,700' rel='stylesheet' type='text/css'>
+    <script>window.markdeepOptions = {'tocStyle':'long'};</script>
+    <script src="../../markdeep.min.js"></script>
+    <script>window.alreadyProcessedMarkdeep||(document.body.style.visibility="visible")</script>
+</body>

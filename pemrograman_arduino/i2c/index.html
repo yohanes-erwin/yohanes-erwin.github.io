@@ -1,0 +1,361 @@
+<head>
+    <meta charset="utf-8" lang="en">
+    <link rel="icon" href="../../logo.png">
+    <style class="fallback">
+    body {
+        visibility: hidden;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    </style>
+</head> 
+<body>
+    **Bab 12 I2C Communication**
+    **Instagram: [@klinikarduino](https://www.instagram.com/klinikarduino/)**
+    **Facebook: [@klinikarduino](https://web.facebook.com/klinikarduino)**
+    **by [Erwin Setiawan](https://yohanes-erwin.github.io/)**
+    
+    <center>**[Pemrograman Arduino](../index.html)**</center>
+
+    I2C
+    ===========================
+    Inter-Integrated Circuit (I2C) merupakan komunikasi serial synchronous yang biasa digunakan untuk jarak dekat.
+    I2C biasa disebut juga I<sup>2</sup>C atau IIC atau Two-Wire Interface (TWI).
+
+    I2C mirip seperti SPI, banyak digunakan untuk menghubungkan mikrokontroler dengan sensor ataupun IC lainnya.
+    Perbedaan utama I2C dan SPI yaitu jumlah sinyal yang diperlukannya.
+    Pada I2C, kita hanya membutuhkan 2 sinyal (SCK dan SDA), sedangkan pada SPI diperlukan 4 sinyal (SCK, MOSI, MISO, SS).
+    SPI memiliki arsitektur master-slave yang bisa terdiri dari beberapa master dan beberapa slave seperti pada Figure [fig:i2c_wiring].
+    
+    ![Figure [fig:i2c_wiring]: Arsitektur bus I2C](i2c_wiring.jpg width=500px)
+
+    Pada I2C, master dapat mengakses slave dengan menggunakan address yang dimiliki oleh masing-masing slave.
+    Address tersebut memiliki panjang 7-bit.
+    Secara teori jumlah maksimum alamat address-nya adalah 128, tetapi ada beberapa address yang di-reserved, sehingga total hanya ada 112 alamat address.
+
+    I2C merupakan bus multi-master dan multi-slave, sehingga bisa terdapat lebih dari satu master dalam bus tersebut.
+    Walaupun demikian, hanya ada satu master yang boleh mengakses satu slave pada satu waktu.
+    Pin SCL dan SDA merupakan pin [open-drain](https://en.wikipedia.org/wiki/Open_collector).
+    Pada Figure [fig:i2c_wiring], terdapat resisor pull-up $R_P$ yang akan men-drive sinyal yang terhubung dengan pin SCL dan SDA ke logika HIGH.
+    
+    Pin SCL dan SDA dapat memberikan sinyal 0 dengan menghubungkannya ke GND, tetapi pin tersebut tidak dapat memberikan supply untuk logika HIGH.
+    Logika HIGH merupakan nilai default dari pull-up resistor, ketika tidak ada master atau slave yang men-drive pin SCL dan SDA ke logic LOW.
+
+    Figure [fig:i2c_protocol_1] menampilkan contoh sinyal I2C.
+    Pada kondisi idle, SCL dan SDA bernilai HIGH.
+    Kondisi START terjadi ketika SDA bernilai LOW sebelum SCL bernilai LOW juga.
+    Kondisi STOP terjadi ketika SDA bernilai HIGH setelah SCL bernilai HIGH juga.
+
+    ![Figure [fig:i2c_protocol_1]: Contoh sinyal protocol I2C. Sumber: [SparkFun](https://learn.sparkfun.com/tutorials/i2c/all)](i2c_protocol_1.jpg width=700px)
+
+    Setelah master mengirim kondisi START, maka master akan mengirim address slave yang diikuti oleh R/W bit.
+    Kemudian slave pemilik address tersebut harus memberikan ACK untuk memberikan feedback kepada master bahwa slave tersebut bisa merespon.
+    Selanjutnya master atau slave dapat mengirim atau menerima data byte (MSB first) tergantung bit R/W yang sebelumnya dikirim.
+    Setiap data yang dikirim atau diterima harus ada ACK yang mengindikasikan bahwa data tersebut telah berhasil diterima.
+
+    Figure [fig:i2c_protocol_2] menampilkan detail protocol I2C ketika master mengirim dan menerima data.
+    Ketika master mengirim data ke slave, R/W bit bernilai 0.
+    Setiap data byte yang berhasil diterima oleh slave akan ada ACK (bernilai 0) yang dikirim oleh slave.
+    Ketika master menerima data dari slave, R/W bit bernilai 1.
+    Setiap data byte yang berhasil diterima oleh master akan ada ACK (bernilai 0) yang dikirim oleh master.
+    Jika data byte gagal diterima, maka akan ada NACK yang bernilai 1 baik dari slave maupun master.
+
+    ![Figure [fig:i2c_protocol_2]: Protocol I2C](i2c_protocol_2.jpg width=700px)
+
+    Jika kita menggunakan library Arduino, maka sudah terdapat library untuk mempermudah penggunaan I2C.
+    Biasanya sudah terdapat fungsi untuk mempermudah pengiriman dan penerimaan data.
+    Walaupun demikian tetap penting untuk memahami terorinya agar dapat melakukan debugging ketika terjadi masalah.
+
+    OLED SSD1306
+    ===========================
+    Organic light-emitting diode (OLED) merupakan tipe display yang banyak digunakan pada TV, smartphone, atau embedded device.
+    OLED yang akan digunakan pada tutorial ini yaitu SSD1306 dengan ukuran 0.96-inch dan resolusi 128x64 pixels seperti pada Figure [fig:ssd1306].
+
+    ![Figure [fig:ssd1306]: Modul OLED SSD1306](oled-ssd1306.jpg width=180px)
+
+    Untuk menggunakan OLED tersebut sudah terdapat library Arduino-nya.
+    Library untuk OLED SSD1306 dapat di-download di [sini](https://github.com/adafruit/Adafruit_SSD1306).
+
+    RTC DS1307
+    ===========================
+    Real-time clock (RTC) merupakan IC yang digunakan untuk mengukur waktu dalam detik, menit, jam, sampai hari, bulan, dan tahun.
+    Mirip seperti timer, tetapi clock yang digunakan biasanya memiliki frekuensi kecil yaitu 32.768kHz.
+    IC ini dapat kita gunakan untuk membuat jam ataupun kalender.
+    Pada tutorial ini, kita akan menggunakan modul RTC DS1307 seperti pada Figure [fig:rtc-ds1307].
+
+    ![Figure [fig:rtc-ds1307]: Modul RTC DS1307](rtc-ds1307.jpg width=200px)
+
+    Untuk menggunakan RTC tersebut sudah terdapat library Arduino-nya.
+    Library untuk RTC DS1307 dapat di-download di [sini](https://github.com/Makuna/Rtc).
+
+    Contoh Program
+    ===========================
+    Pada contoh program ini, kita akan mempelajari tiga contoh program yang menggunakan I2C untuk berkomunikasi dengan OLED SSD1306 dan RTC DS1307.
+    Pada contoh pertama, kita akan menampilkan text hello world pada OLED.
+    Pada contoh kedua, kita akan membaca waktu pada RTC dan menampilkannya pada serial monitor.
+    Pada contoh ketiga, kita akan membaca waktu pada RTC dan menampilkannya pada OLED.
+
+    Program OLED SSD1306
+    ---------------------------
+    Pada contoh progam ini, kita akan menampilkan text hello world pada OLED.
+
+    Untuk dapat menjalankan contoh program ini diperlukan beberapa komponen:
+    * Development board ESP32
+    * OLED SSD1306
+    * Breadboard
+    * Kabel jumper
+
+    Ilustrasi koneksi dari komponen-komponen ke ESP32 ditampilkan pada Figure [fig:i2c-oled-ssd1306-bb].
+    Pin yang digunakan untuk menghubungkan komponen-komponen ke ESP32 ditampilkan pada Table [tab:wiring_1].
+
+    ![Figure [fig:i2c-oled-ssd1306-bb]: Rangkaian breadboard untuk program OLED SSD1306](i2c-oled-ssd1306-bb.jpg width=400px)
+
+
+    SSD1306 Pin  | ESP32 Pin
+    -------------|------------------
+    SCL          | D32
+    SDA          | D33
+    3.3V         | 3.3V
+    GND          | GND
+    [Table [tab:wiring_1]: Koneksi SSD1306 ke ESP32]
+
+    Listing [lst:ssd1306] menampilkan contoh program hello world pada OLED.
+    Berikut ini penjelasan cara kerja program tersebut:
+    * Pada **line 1-2**, kita meng-import library untuk I2C dan OLED SSD1306. Library OLED SSD1306 dapat di-download dari [sini](https://github.com/adafruit/Adafruit_SSD1306).
+    * Pada **line 5-7**, kita melakukan pengecekan setting library agar sesuai dengan ukuran display OLED yang digunakan.
+    * Pada **line 10-11**, kita mendefinisikan pin SDA dan SCL.
+    * Pada **line 14**, kita mendefinisikan address dari module OLED SSD1306 yaitu 0x3C.
+    * Pada **line 17**, kita mendeklarasikan objek untuk OLED tersebut.
+    * Pada **line 22**, kita melakukan inisialisasi I2C dengan frekuensi clock SCL sebesar 400kHz.
+    * Pada **line 25-27**, kita melakukan inisialisasi OLED, kemudian membersihkan display OLED tersebut.
+    * Pada **line 30-33**, kita melakukan pengaturan font, lokasi penulisan text, dan menulis "Hello, World!" ke memori buffer OLED.
+    * Pada **line 36**, kita menampilkan isi memory buffer OLED ke display OLED.
+     
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C linenumbers
+    #include <Wire.h>
+    #include <Adafruit_SSD1306.h>
+    
+    // Pengecekan setting ukuran OLED pada library
+    #if (SSD1306_LCDHEIGHT != 64) // 128x64 pixel
+    #error("Height incorrect, please fix Adafruit_SSD1306.h!");
+    #endif
+    
+    // Pin I2C
+    #define I2C_SDA 33
+    #define I2C_SCL 32
+    
+    // Address I2C OLED
+    #define OLED_ADDR 0x3C
+    
+    // Deklarasi object untuk OLED display
+    Adafruit_SSD1306 oled;
+    
+    void setup()
+    {
+      // Inisialisasi pin I2C
+      Wire.begin(I2C_SDA, I2C_SCL, 400000);
+        
+      // Inisialisasi OLED
+      oled.begin(SSD1306_SWITCHCAPVCC, OLED_ADDR);
+      // Membersihkan memory OLED
+      oled.clearDisplay();
+    
+      // Menulis text ke memory OLED
+      oled.setTextSize(1);
+      oled.setTextColor(WHITE);
+      oled.setCursor(27, 30);
+      oled.print("Hello, world!");
+    
+      // Menampilkan isi memory OLED ke display OLED
+      oled.display();
+    }
+    
+    void loop()
+    {
+    }        
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [lst:ssd1306]: Contoh program hello world pada OLED]
+
+    Figure [fig:i2c-oled-ssd1306] menampilkan hasil akhir dari program ini.
+    Text "Hello, World!" akan tampil pada OLED tersebut.
+
+    ![Figure [fig:i2c-oled-ssd1306]: Hasil program OLED SSD1306](i2c-oled-ssd1306.jpg width=640px)
+
+    Program RTC DS1307
+    ---------------------------
+    Pada contoh program ini, kita akan membaca waktu pada RTC dan menampilkannya pada serial monitor.
+
+    Untuk dapat menjalankan contoh program ini diperlukan beberapa komponen:
+    * Development board ESP32
+    * RTC DS1307
+    * Breadboard
+    * Kabel jumper
+
+    Ilustrasi koneksi dari komponen-komponen ke ESP32 ditampilkan pada Figure [fig:i2c-rtc-ds1307-bb].
+    Pin yang digunakan untuk menghubungkan komponen-komponen ke ESP32 ditampilkan pada Table [tab:wiring_2].
+
+    ![Figure [fig:i2c-rtc-ds1307-bb]: Rangkaian breadboard untuk program RTC DS1307](i2c-rtc-ds1307-bb.jpg width=400px)
+
+
+    DS1307 Pin   | ESP32 Pin
+    -------------|------------------
+    SCL          | D32
+    SDA          | D33
+    3.3V         | 3.3V
+    GND          | GND
+    [Table [tab:wiring_2]: Koneksi DS1307 ke ESP32]
+
+    Listing [lst:ds1307] menampilkan contoh program DS1307.
+    Berikut ini penjelasan cara kerja program tersebut:
+    * Pada **line 1-2**, kita meng-import library untuk I2C dan RTC DS1307. Library RTC DS1307 dapat di-download dari [sini](https://github.com/Makuna/Rtc).
+    * Pada **line 5-6**, kita mendefinisikan pin SDA dan SCL.
+    * Pada **line 9**, kita mendeklarasikan objek untuk RTC tersebut.
+    * Pada **line 14-17**, kita melakukan inisialisasi serial dan I2C.
+    * Pada **line 20**, kita melakukan inisialisasi RTC.
+    * Pada **line 22-24**, kita melakukan pengaturan waktu RTC ke waktu compile kode tersebut, kemudian kita mulai menjalankan RTC tersebut.
+    * Pada **line 30-36**, kita membaca waktu dari RTC tersebut setiap 1 detik, kemudian dikirim ke serial monitor.
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C linenumbers
+    #include <Wire.h>
+    #include <RtcDS1307.h>
+    
+    // Pin I2C
+    #define I2C_SDA 33
+    #define I2C_SCL 32
+    
+    // Deklarasi object untuk RTC
+    RtcDS1307<TwoWire> rtc(Wire);
+    
+    void setup()
+    {
+      // Inisialisasi serial
+      Serial.begin(9600);
+        
+      // Inisialisasi pin I2C
+      Wire.begin(I2C_SDA, I2C_SCL, 400000);
+        
+      // Inisialisasi RTC
+      rtc.Begin();  
+      // Men-set waktu RTC ke waktu saat kode di-compile
+      RtcDateTime compiled = RtcDateTime(__DATE__, __TIME__);
+      rtc.SetDateTime(compiled);
+      rtc.SetIsRunning(true);
+    }
+    
+    void loop()
+    {
+      // Membaca waktu RTC (date and time)
+      RtcDateTime now = rtc.GetDateTime();
+        
+      // Print waktu RTC ke serial monitor 
+      Serial.printf("%04d/%02d/%02d %02d:%02d:%02d\n",
+          now.Year(), now.Month(), now.Day(),
+          now.Hour(), now.Minute(), now.Second());
+      delay(1000);
+    }        
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [lst:ds1307]: Contoh program RTC DS1307]
+
+    Figure [fig:i2c-rtc-ds1307] menampilkan hasil program DS1307.
+    Waktu yang terdiri dari tahun, bulan, tanggal, dan jam, menit, detik akan ditampilkan pada serial monitor setiap 1 detik.
+
+    ![Figure [fig:i2c-rtc-ds1307]: Hasil program RTC DS1307](i2c-rtc-ds1307.jpg width=640px)
+
+    Program OLED SSD1306 dan RTC DS1307
+    ---------------------------
+    Pada program ini, kita akan membaca waktu pada RTC dan menampilkannya pada OLED.
+    Program ini merupakan gabungan dari kedua program sebelumnya.
+    Dua device I2C terhubung ke satu bus I2C yang sama dan dapat diakses oleh ESP32.
+
+    Untuk dapat menjalankan contoh program ini diperlukan beberapa komponen:
+    * Development board ESP32
+    * OLED SSD1306
+    * RTC DS1307
+    * Breadboard
+    * Kabel jumper
+
+    Ilustrasi koneksi dari komponen-komponen ke ESP32 ditampilkan pada Figure [fig:rtc-ds1307-oled-ssd1306-bb].
+    Pin yang digunakan untuk menghubungkan komponen-komponen ke ESP32 ditampilkan pada Table [tab:wiring_1] dan Table [tab:wiring_2].
+
+    ![Figure [fig:rtc-ds1307-oled-ssd1306-bb]: Rangkaian breadboard untuk program OLED SSD1306 dan RTC DS1307](rtc-ds1307-oled-ssd1306-bb.jpg width=400px)
+
+    Listing [lst:ssd1306_ds1307] menampilkan contoh program OLED SSD1306 dan RTC DS1307.
+    Program tersebut merupakan gabungan dari kedua progam sebelumnya.
+    Bagian pembacaan RTC sama seperti program DS1307.
+    Perbedaan utamanya yaitu pada hasil pembacaan RTC yang ditampilkan pada OLED, bukan dikirim ke serial monitor.
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C linenumbers
+    #include <Wire.h>
+    #include <RtcDS1307.h>
+    #include <Adafruit_SSD1306.h>
+    
+    // Pengecekan setting ukuran OLED pada library
+    #if (SSD1306_LCDHEIGHT != 64) // 128x64 pixel
+    #error("Height incorrect, please fix Adafruit_SSD1306.h!");
+    #endif
+    
+    // Pin I2C
+    #define I2C_SDA 33
+    #define I2C_SCL 32
+    
+    // Address I2C OLED
+    #define OLED_ADDR 0x3C
+    
+    // Deklarasi object untuk RTC
+    RtcDS1307<TwoWire> rtc(Wire);
+    
+    // Deklarasi object untuk OLED display
+    Adafruit_SSD1306 oled;
+    
+    void setup()
+    {
+      // Inisialisasi pin I2C
+      Wire.begin(I2C_SDA, I2C_SCL, 400000);
+        
+      // Inisialisasi RTC
+      rtc.Begin();  
+      // Men-set waktu RTC ke waktu saat kode di-compile
+      RtcDateTime compiled = RtcDateTime(__DATE__, __TIME__);
+      rtc.SetDateTime(compiled);
+      rtc.SetIsRunning(true);
+    
+      // Inisialisasi OLED
+      oled.begin(SSD1306_SWITCHCAPVCC, OLED_ADDR);
+      // Membersihkan memory OLED
+      oled.clearDisplay();
+    }
+    
+    void loop()
+    {
+      // Read RTC date and time
+      RtcDateTime now = rtc.GetDateTime();
+        
+      // Menampilkan waktu RTC pada OLED
+      oled.clearDisplay();
+      oled.setTextSize(2);
+      oled.setTextColor(WHITE);
+      oled.setCursor(4, 12);
+      oled.printf("%04d/%02d/%02d",
+          now.Year(), now.Month(), now.Day());
+      oled.setCursor(16, 38);
+      oled.printf("%02d:%02d:%02d",
+          now.Hour(), now.Minute(), now.Second());
+      oled.display();
+      delay(1000);
+    }        
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [lst:ssd1306_ds1307]: Contoh program OLED SSD1306 dan RTC DS1307]
+
+    Figure [fig:rtc-ds1307-oled-ssd1306] menampilkan hasil dari program OLED SSD1306 dan RTC DS1307.
+    Pada OLED dapat terlihat tahun, bulan, tanggal, dan jam, menit, detik.
+
+    ![Figure [fig:rtc-ds1307-oled-ssd1306]: Hasil program OLED SSD1306 dan RTC DS1307](rtc-ds1307-oled-ssd1306.gif width=640px)
+
+    Repository Kode Program
+    ===========================
+    Kode program untuk OLED SSD1306, RTC DS1307, serta OLED SSD1306 dan RTC DS1307 dapat didapatkan di repository ini: [i2c-oled-ssd1306](https://github.com/klinikarduino/esp32/tree/main/i2c-oled-ssd1306), [i2c-rtc-ds1307](https://github.com/klinikarduino/esp32/tree/main/i2c-rtc-ds1307), dan [rtc-ds1307-oled-ssd1306](https://github.com/klinikarduino/esp32/tree/main/rtc-ds1307-oled-ssd1306).
+
+    <link href='https://fonts.googleapis.com/css?family=Roboto:400,300,100,100italic,300italic,400italic,700' rel='stylesheet' type='text/css'>
+    <script>window.markdeepOptions = {'tocStyle':'long'};</script>
+    <script src="../../markdeep.min.js"></script>
+    <script>window.alreadyProcessedMarkdeep||(document.body.style.visibility="visible")</script>
+</body>

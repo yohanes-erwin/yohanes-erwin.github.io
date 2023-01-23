@@ -1,0 +1,242 @@
+<head>
+    <meta charset="utf-8" lang="en">
+    <link rel="icon" href="../../logo.png">
+    <style class="fallback">
+    body {
+        visibility: hidden;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    </style>
+</head> 
+<body>
+    **Bab 9 Timer**
+    **Instagram: [@klinikarduino](https://www.instagram.com/klinikarduino/)**
+    **Facebook: [@klinikarduino](https://web.facebook.com/klinikarduino)**
+    **by [Erwin Setiawan](https://yohanes-erwin.github.io/)**
+    
+    <center>**[Pemrograman Arduino](../index.html)**</center>
+
+    Timer
+    ===========================
+    Sebagai programmer Arduino, kita pasti sudah pernah menggunakan timer bahkan tanpa kita sadari.
+    Hal ini terjadi karena banyak bagian hardware low-level yang diabstraksi dengan library Arduino.
+    Ada banyak fungsi Arduino yang menggunakan timer seperti `delay`, `millis`, `micros`, dan `delayMicroseconds`.
+    Semua fungsi tersebut menggunakan timer.
+
+    Timer pada dasarnya berisi register untuk menyimpan nilai hitungan angka.
+    Jika timer tersebut 8-bit, maka akan menghitung dari 0-255, atau disebut count-up timer seperti pada Figure [fig:timer_basic].
+    Timer juga bisa menghitung secara mundur dari 255-0, atau disebut count-down timer.
+    Setiap hitungan naik atau turun dilakukan setiap periode clock timer tersebut.
+
+    ![Figure [fig:timer_basic]: Cara kerja timer](timer_basic.jpg width=250px)
+
+    Sebagai contoh, jika kita menggunakan clock timer $1 MHz$, maka berapa maksimum waktu yang dapat dihitung oleh timer 8-bit?
+    Dengan $1 MHz$ clock, maka periodenya adalah $1\mu s$. Maksimum waktu yang dapat dihitung timer 8-bit adalah $256\cdot 1\mu s=256\mu s$.
+    
+    Pada module timer biasanya terdapat **prescaler** yang berfungsi untuk memperlambat clock timer agar maksimum hitungan timer bisa lebih panjang. 
+    Sebagai contoh, prescaler $/2$ akan memperlambat clock setengahnya, jika kita menggunakan clock timer $1 MHz$, maka akan menjadi $500kHz$.
+    Oleh karena itu maksimum hitungan timer menjadi $256\cdot 2\mu s=512\mu s$.
+
+    Fungsi Delay
+    ===========================
+    Dengan library Arduino, kita tidak perlu repot mengkonfigurasi timer secara low-level karena itu sudah dilakukan oleh library.
+    Kita hanya perlu mengerti prinsip kerja dan cara menggunakannya saja.
+
+    Fungsi `delay` merupakan cara paling sederhana untuk menggunakan timer.
+    Fungsi tersebut memiliki satu argumen input yaitu nilai milliseconds.
+    Selain `delay` ada juga fungsi `delayMicroseconds` yang memiliki satu argumen input yaitu nilai microseconds.
+    
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C linenumbers
+    void delay(uint32_t ms);
+    void delayMicroseconds(uint32_t us);
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [lst:delay]: Fungsi delay pada Arduino]
+
+    Jika fungsi tersebut dipanggil, CPU akan berhenti dan menunggu (tidak bisa melakukan eksekusi task lain) sampai hitungan timer tersebut selesai. 
+    Untuk program sederhana, hal ini tidak menjadi masalah, tetapi untuk program yang membutuhkan respon cepat, maka fungsi `delay` dapat mengganggu.
+
+    Contoh Program
+    ===========================
+    Pada contoh program ini, kita akan mempelajari dua contoh penggunaan timer selain fungsi `delay` yaitu timer millis dan timer interrupt.
+    Contoh program ini menggunakan dua buah LED.
+    LED merah berkedip setiap 200 ms dan LED hijau setiap 2000 ms.
+
+    Untuk dapat menjalankan contoh program ini diperlukan beberapa komponen:
+    * Development board ESP32
+    * 2 buah LED
+    * 2 buah resistor 100Ω
+    * Breadboard
+    * Kabel jumper
+
+    Ilustrasi koneksi dari komponen-komponen ke ESP32 ditampilkan pada Figure [fig:timer-bb].
+    Pin yang digunakan untuk menghubungkan komponen-komponen ke ESP32 ditampilkan pada Table [tab:wiring].
+    LED tersebut menggunakan rangkaian active-low.
+
+    ![Figure [fig:timer-bb]: Rangkaian breadboard untuk program timer millis dan timer interrupt](timer-bb.jpg width=400px)
+
+
+    Sensor/Aktuator Pin     | ESP32 Pin
+    ------------------------|------------------
+    LED merah               | D25
+    LED hijau               | D26
+    [Table [tab:wiring]: Koneksi ESP32]
+
+    Program Timer Millis
+    ---------------------------
+    Timer millis merupakan timer dengan tipe data unsigned long 32-bit.
+    Timer ini menghitung naik setiap periode 1 ms.
+    Oleh sebab itu diberi nama millis.
+    Timer ini akan kembali lagi ke 0 (rollover) setelah $2^{32}\cdot 1 ms=4294967296 ms\approx 49.7 days$.
+    Diperlukan waktu sekitar 50 hari sampai timer millis kembali lagi ke 0.
+    Timer millis akan mulai menghitung ketika board dinyalakan.
+
+    Listing [lst:kode_millis] menampilkan contoh program timer millis.
+    Berikut ini penjelasan cara kerja program tersebut:
+    * Pada **line 2-3**, kita melakukan definisi pin LED.
+    * Pada **line 5-6**, kita mendefinisikan variable untuk nilai millis sebelumnya (`previousMillis`). Variable ini akan berisi nilai millis pada iterasi sebelumnya ketika periode delay terpenuhi.
+    * Pada line **11-16**, kita mengkonfigurasi GPIO sebagai output dan mengatur nilai awal LED ke kondisi mati.
+    * Pada **line 22**, setiap iterasi loop kita membaca nilai dari timer millis, kemudian disimpan pada variable `currentMillis`. Nilai tersebut merupakan nilai millisecond sejak board dinyalakan.
+    * Pada **line 25-31** merupakan kode untuk pengecekan apakah millis sudah berlalu selama 200 ms dengan cara mengurangkan `currentMillis` dengan `previousMillis`. Jika iya, maka kondisi LED merah akan di-invert (mati menjadi nyala dan sebaliknya). Setelah itu nilai `previousMillis` perlu di-update dengan nilai `currentMillis`.
+    * Pada **line 34-40** sama seperti kode untuk LED merah, tetapi nilai millis-nya adalah 2000 ms untuk LED hijau.
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C linenumbers
+    // LED pin
+    #define RED_LED_PIN     25
+    #define GREEN_LED_PIN   26
+    
+    unsigned long previousMillisRedLed = 0;
+    unsigned long previousMillisGreenLed = 0;
+    
+    void setup()
+    {
+      // Konfigurasi GPIO pin sebagai output untuk LED
+      pinMode(RED_LED_PIN, OUTPUT);
+      pinMode(GREEN_LED_PIN, OUTPUT);
+      
+      // Set nilai LED ke kondisi off
+      digitalWrite(RED_LED_PIN, HIGH);
+      digitalWrite(GREEN_LED_PIN, HIGH);
+    }
+    
+    void loop()
+    {
+      // Membaca nilai timer milliseconds
+      unsigned long currentMillis = millis();
+    
+      // Jika waktu timer untuk red LED sudah berlalu selama 200 ms 
+      if ((currentMillis-previousMillisRedLed) >= 200)
+      {
+        // Simpan nilai millis saat ini untuk referensi pada loop berikutnya
+        previousMillisRedLed = currentMillis;
+        // Invert nilai LED
+        digitalWrite(RED_LED_PIN, !digitalRead(RED_LED_PIN));
+      }
+    
+      // Jika waktu timer untuk green LED sudah berlalu selama 2000 ms 
+      if ((currentMillis-previousMillisGreenLed) >= 2000)
+      {
+        // Simpan nilai millis saat ini untuk referensi pada loop berikutnya
+        previousMillisGreenLed = currentMillis;
+        // Invert nilai LED
+        digitalWrite(GREEN_LED_PIN, !digitalRead(GREEN_LED_PIN));
+      }
+    }    
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [lst:kode_millis]: Contoh program timer millis]
+
+    Figure [fig:millis] mengilustrasikan kode program timer millis untuk program LED berkedip tanpa fungsi delay pada Listing [lst:kode_millis].
+    Pada setiap iterasi loop dilakukan pengecekan apakah nilai current millis sudah lebih besar sebanyak periode yang diinginkan (pada gambar tersebut yaitu 1000 ms) dari nilai previous millis. Jika kondisi terpenuhi, maka itu berarti waktu sudah berlalu sebanyak 1000 ms, kemudian nilai previous millis akan di-update dengan nilai current millis untuk iterasi berikutnya.
+
+    ![Figure [fig:millis]: Cara kerja timer millis](millis.jpg width=400px)
+
+    Program Timer Interrupt
+    ---------------------------
+    Timer interrupt merupakan interrupt yang dihasilkan oleh timer setiap periode waktu tertentu.
+    Figure [fig:timer_interrupt] mengilustrasikan cara kerja timer interrupt.
+    Setiap hitungan timer mencapai nilai yang sudah didefinisikan, maka interrupt akan di-generate.
+    Di dalam kode ISR interrupt tersebut, kita dapat melakukan suatu task yang akan dieksekusi secara periodik.
+
+    ![Figure [fig:timer_interrupt]: Cara kerja timer interrupt](timer_interrupt.jpg width=500px)
+
+    Listing [lst:kode_interrupt] menampilkan contoh program timer interrupt.
+    Berikut ini penjelasan cara kerja program tersebut:
+    * Pada **line 1**, kita menambahkan library `ticker.h` yang diperlukan untuk membuat timer interrupt.
+    * Pada **line 4-5**, kita melakukan definisi pin LED.
+    * Pada **line 7-8**, kita membuat objek dari class `Ticker` untuk LED merah dan hijau.
+    * Pada **line 10-14** dan **line 16-20**, kita membuat fungsi yang akan dipanggil ketika ada timer interrupt, masing-masing untuk LED merah dan LED hijau.
+    * Pada line **25-30**, kita mengkonfigurasi GPIO sebagai output dan mengatur nilai awal LED ke kondisi mati.
+    * Pada **line 33-35**, kita memanggil fungsi `attach_ms` untuk mengkofigurasi objek ticker dengan interval interrupt-nya dan fungsi ISR-nya. LED merah menghasilkan interrupt setiap 200 ms, dan LED hijau setiap 2000 ms.
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C linenumbers
+    #include <Ticker.h>
+
+    // LED pin
+    #define RED_LED_PIN     25
+    #define GREEN_LED_PIN   26
+        
+    Ticker timerRedLed;
+    Ticker timerGreenLed;
+        
+    void timerRedLed_isr()
+    {
+      // Invert nilai LED
+      digitalWrite(RED_LED_PIN, !digitalRead(RED_LED_PIN));
+    }
+        
+    void timerGreenLed_isr()
+    {
+      // Invert nilai LED
+      digitalWrite(GREEN_LED_PIN, !digitalRead(GREEN_LED_PIN));
+    }
+        
+    void setup()
+    {
+      // Konfigurasi GPIO pin sebagai output untuk LED
+      pinMode(RED_LED_PIN, OUTPUT);
+      pinMode(GREEN_LED_PIN, OUTPUT);
+          
+      // Set nilai LED ke kondisi off
+      digitalWrite(RED_LED_PIN, HIGH);
+      digitalWrite(GREEN_LED_PIN, HIGH);
+          
+      // Set ticker untuk generate interrupt setiap 200 ms
+      timerRedLed.attach_ms(200, timerRedLed_isr);
+      // Set ticker untuk generate interrupt setiap 2000 ms
+      timerGreenLed.attach_ms(2000, timerGreenLed_isr);
+    }
+        
+    void loop()
+    {
+    }        
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [lst:kode_interrupt]: Contoh program timer interrupt]
+
+    Dapat kita lihat di fungsi loop pada program timer interrupt tidak ada kode apapun, sehingga CPU akan idle ketika tidak ada interrupt, dan bisa kita digunakan untuk eksekusi task lain.
+
+    Hasil dan Analisis
+    ---------------------------
+    Figure [fig:timer-result] menampilkan hasil dari program timer millis dan timer interrupt.
+    Keduanya akan menghasilkan hasil yang sama.
+    Perbedaanya yaitu pada flow kode tersebut dieksekusi.
+
+    ![Figure [fig:timer-result]: Hasil program timer millis dan timer interrupt](timer.gif width=640px)
+
+    Figure [fig:cpu_exe] berisi perbandingan timing diagram eksekusi CPU untuk fungsi delay, timer millis, dan timer interrupt.
+    Contoh tersebut merupakan LED berkedip setiap 1 detik.
+    Pada fungsi delay, CPU akan menunggu sampai fungsi delay selesai dan tidak bisa melakukan task lain.
+    Pada timer millis, CPU hanya perlu melakukan pengecekan millis apakah target sudah tercapai atau belum, setelah itu CPU bisa melakukan task lain.
+    Pada timer interrupt, CPU benar-benar idle tanpa perlu melakukan pengecekan millis dan bisa melakukan task lain.
+
+    ![Figure [fig:cpu_exe]: Timing diagram eksekusi CPU untuk fungsi delay, timer millis, dan timer interrupt](cpu_exe.jpg width=600px)
+
+    Pada program timer millis, kode LED akan dieksekusi di fungsi loop, sedangkan pada program timer interrupt, kode LED akan dieksekusi di fungsi ISR.
+
+    Repository Kode Program
+    ===========================
+    Kode program untuk timer millis dan timer interrupt dapat didapatkan di repository ini: [timer-millis](https://github.com/klinikarduino/esp32/tree/main/timer-millis) dan [timer-interrupt](https://github.com/klinikarduino/esp32/tree/main/timer-interrupt).
+
+    <link href='https://fonts.googleapis.com/css?family=Roboto:400,300,100,100italic,300italic,400italic,700' rel='stylesheet' type='text/css'>
+    <script>window.markdeepOptions = {'tocStyle':'long'};</script>
+    <script src="../../markdeep.min.js"></script>
+    <script>window.alreadyProcessedMarkdeep||(document.body.style.visibility="visible")</script>
+</body>

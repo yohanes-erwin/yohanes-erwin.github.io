@@ -1,0 +1,164 @@
+<head>
+    <meta charset="utf-8" lang="en">
+    <link rel="icon" href="../../logo.png">
+    <style class="fallback">
+    body {
+        visibility: hidden;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    </style>
+</head> 
+<body>
+    **Bab 10 Pulse-Width Modulation**
+    **Instagram: [@klinikarduino](https://www.instagram.com/klinikarduino/)**
+    **Facebook: [@klinikarduino](https://web.facebook.com/klinikarduino)**
+    **by [Erwin Setiawan](https://yohanes-erwin.github.io/)**
+    
+    <center>**[Pemrograman Arduino](../index.html)**</center>
+
+    PWM
+    ===========================
+    Pulse-width modulation (PWM) merupakan sinyal kotak dengan durasi HIGH dan LOW yang bervariasi seperti pada Figure [fig:pwm].
+    Sinyal PWM akan menghasilkan tegangan rata-rata yang merupakan tegangan pseudo analog.
+    Semakin lama durasi HIGH-nya, maka tegangan rata-rata yang dihasilkan akan semakin besar, dan berlaku sebaliknya.
+
+    Tegangan pseudo analog ini dapat digunakan untuk aplikasi pengontrolan kecerahan LED, kecepatan motor DC, atau motor servo.
+    Sinyal PWM ini dibuat dengan menggunakan timer, tetapi pada Arduino sudah terdapat library untuk men-generate sinyal PWM tanpa harus berurusan dengan low-level hardware-nya.
+
+    ![Figure [fig:pwm]: Contoh sinyal PWM dengan duty cycle yang bervariasi](pwm.jpg width=600px)
+
+    Figure [fig:pwm_detail] menampilkan contoh detail sinyal PWM.
+    Sinyal tersebut memiliki frekuensi $1kHz$ dan duty cycle $70\%$.
+    Karena frekuensinya adalah $1kHz$, maka periodenya adalah $1ms$.
+    Duty cycle merupakan persentase sinyal tersebut bernilai HIGH dari total periodenya.
+    Karena duty cycle-nya $70\%$, maka durasi HIGH selama $0.7ms$ dan durasi LOW selama $0.3ms$.
+    Jika tegangan supply $V_S=3.3V$, maka tegangan rata-rata dari sinyal PWM ini adalah $70\%\cdot 3.3V=2.31V$. 
+
+    ![Figure [fig:pwm_detail]: Penjelasan detail sinyal PWM](pwm_detail.jpg width=700px)
+
+    Dengan memvariasikan nilai duty cycle PWM terhadap waktu, maka kita dapat membuat sinyal analog seperti contohnya sinyal sinusoid pada Figure [fig:pwm_sine].
+    Sinyal analog seperti ini dapat digunakan untuk pengontrolan LED ataupun kecepatan motor DC.
+
+    ![Figure [fig:pwm_sine]: Sinyal sinusoid yang dibuat dari sinyal PWM](pwm_sine.jpg width=400px)
+
+    Timer dapat digunakan untuk men-generate timing untuk sinyal PWM seperti pada Figure [fig:pwm_timer].
+    Timer akan menghitung dari $0$ sampai $2^{n}-1$ dimana $n$ adalah resolusi timer yang digunakan.
+
+    ![Figure [fig:pwm_timer]: Cara kerja timer untuk menghasilkan sinyal PWM](pwm_timer.jpg width=350px)
+
+    Titik **a** merupakan hitungan timer untuk nilai duty cycle, sedangkan titik **b** merupakan hitungan timer untuk periode.
+    Dari kedua titik tersebut, maka kita bisa menentukan kapan GPIO output harus bernilai HIGH dan LOW.
+    Pada titik **a** GPIO berubah dari HIGH menjadi LOW, sedangkan pada titik **b** GPIO berubah dari LOW menjadi HIGH.
+
+    Library PWM
+    ===========================
+    Pada ESP32, blok untuk men-generate sinyal PWM bernama LED control (LEDC).
+    Fungsi utama blok ini yaitu untuk mengontrol kecerahan LED, akan tetapi sinyal PWM ini juga bisa digunakan untuk kebutuhan lain.
+    ESP32 memiliki 16 channel PWM yang dapat men-generate 16 sinyal PWM yang berbeda.
+
+    Ada beberapa fungsi utama yang diperlukan untuk mengkonfigurasi PWM pada ESP32 seperti pada Listing [lst:esp32_pwm].
+    Fungsi `ledcSetup` berfungsi untuk mengkonfigurasi channel PWM.
+    Fungsi `ledcAttachPin` berfungsi untuk menghubungkan channel PWM dengan pin GPIO output.
+    Fungsi `ledcWrite` berfungsi untuk menulis nilai duty cycle untuk channel PWM.
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C linenumbers
+    double ledcSetup(uint8_t channel, double freq, uint8_t resolution_bits);
+    void ledcAttachPin(uint8_t pin, uint8_t channel);
+    void ledcWrite(uint8_t channel, uint32_t duty);
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [lst:esp32_pwm]: Fungsi-fungsi untuk menggunakan PWM pada ESP32]
+
+    Duty cycle pada program dinyatakan dalam integer (bukan percent) sesuai resolusi yang digunakan.
+    Sebagai contoh jika resolusi PWM 8-bit, maka range nilai duty cycle dari 0-255,
+    sedangkan jika resolusi PWM 10-bit, maka range nilai duty cycle dari 0-1023.
+
+    Contoh Program
+    ===========================
+    Pada contoh program ini, kita akan mempelajari contoh penggunaan PWM.
+    Contoh program ini menggunakan satu buah LED.
+    Kita akan mengatur kecerahan LED tersebut.
+
+    Untuk dapat menjalankan contoh program ini diperlukan beberapa komponen:
+    * Development board ESP32
+    * 1 buah LED
+    * 1 buah resistor 100Ω
+    * Breadboard
+    * Kabel jumper
+
+    Ilustrasi koneksi dari komponen-komponen ke ESP32 ditampilkan pada Figure [fig:pwm-led-bb].
+    Pin yang digunakan untuk menghubungkan komponen-komponen ke ESP32 ditampilkan pada Table [tab:wiring].
+    LED tersebut menggunakan rangkaian active-low.
+
+    ![Figure [fig:pwm-led-bb]: Rangkaian breadboard untuk program pengontrolan LED dengan PWM](pwm-led-bb.jpg width=400px)
+
+
+    Sensor/Aktuator Pin     | ESP32 Pin
+    ------------------------|------------------
+    LED merah               | D25
+    [Table [tab:wiring]: Koneksi ESP32]
+
+    Listing [lst:pwm_led] menampilkan contoh program pengontrolan LED dengan PWM.
+    Berikut ini penjelasan cara kerja program tersebut:
+    * Pada **line 2**, kita mendefinisikan pin untuk LED.
+    * Pada **line 5-7**, kita mendefinisikan parameter untuk PWM yaitu channel 0, frekuensi 1kHz, dan resolusi 10-bit.
+    * Pada **line 12**, kita melakukan inisialisasi untuk PWM channel 0.
+    * Pada **line 15**, kita menghubungkan channel PWM 0 ke GPIO yang terhubung dengan LED.
+    * Pada **line 21-25**, kita menurunkan kecerahan LED dengan cara menaikan duty cycle PWM dari 0-1023 dengan kenaikan setiap 20 nilai per 25 ms. Perlu diingat bahwa kita menggunakan rangkaian LED active-low, sehingga semakin besar duty cycle-nya, maka LED akan semakin redup. Karena pada kondisi ketika GPIO tersebut HIGH, LED akan mati.
+    * Pada **line 28-31**, kita menaikan kecerahan LED dengan cara menurunkan duty cycle PWM dari 1023-0 dengan penurunan setiap 20 nilai per 25 ms.
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C linenumbers
+    // LED pin
+    #define LEDPIN  25
+
+    // Parameter untuk PWM
+    const int channel = 0;
+    const int freq = 1000;
+    const int res = 10;
+
+    void setup()
+    {
+      // Inisialisasi PWM
+      ledcSetup(channel, freq, res);
+      
+      // Hubungkan channel PWM ke LED
+      ledcAttachPin(LEDPIN, channel);
+    }
+
+    void loop()
+    {
+      // Decrease brightness LED (active-low LED)
+      for (int i = 0; i <= 1023; i += 20)
+      {
+        ledcWrite(channel, i);
+        delay(25);
+      }
+      
+      // Increase brightness LED (active-low LED)
+      for (int i = 1023; i >= 0; i -= 20)
+      {
+        ledcWrite(channel, i);
+        delay(25);
+      }
+    }
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [lst:pwm_led]: Contoh program pengontrolan LED dengan PWM]
+
+    Figure [fig:pwm-led] menampilkan hasil dari program pengontrolan kecerahan LED dengan PWM.
+    Kecerahan LED akan perlahan-lahan naik dari kondisi mati sampai menyala penuh, kemudian akan perlahan-lahan kembali ke kondisi mati.
+
+    ![Figure [fig:pwm-led]: Hasil program pengontrolan LED dengan PWM](pwm-led.gif width=640px)
+
+    Figure [fig:pwm_fade_anim] menampilkan animasi pengaruh sinyal PWM terhadap kecerahan LED.
+    Pada contoh kasus ini rangkaian yang digunakan yaitu active-high, sehingga semakin besar duty cycle, maka LED akan semakin terang.
+
+    ![Figure [fig:pwm_fade_anim]: Pengaruh sinyal PWM terhadap kecerahan LED (kasus rangkaian LED active-high). Sumber: [deepbluembedded.com](https://deepbluembedded.com/esp32-pwm-tutorial-examples-analogwrite-arduino/)](pwm_fade_anim.gif width=440px)
+
+    Repository Kode Program
+    ===========================
+    Kode program untuk pengontrolan LED dengan PWM dapat didapatkan di repository ini: [pwm-led](https://github.com/klinikarduino/esp32/tree/main/pwm-led).
+
+    <link href='https://fonts.googleapis.com/css?family=Roboto:400,300,100,100italic,300italic,400italic,700' rel='stylesheet' type='text/css'>
+    <script>window.markdeepOptions = {'tocStyle':'long'};</script>
+    <script src="../../markdeep.min.js"></script>
+    <script>window.alreadyProcessedMarkdeep||(document.body.style.visibility="visible")</script>
+</body>

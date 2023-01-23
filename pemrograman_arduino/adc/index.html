@@ -1,0 +1,200 @@
+<head>
+    <meta charset="utf-8" lang="en">
+    <link rel="icon" href="../../logo.png">
+    <style class="fallback">
+    body {
+        visibility: hidden;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    </style>
+</head> 
+<body>
+    **Bab 7 Analog-to-Digital Conversion**
+    **Instagram: [@klinikarduino](https://www.instagram.com/klinikarduino/)**
+    **Facebook: [@klinikarduino](https://web.facebook.com/klinikarduino)**
+    **by [Erwin Setiawan](https://yohanes-erwin.github.io/)**
+    
+    <center>**[Pemrograman Arduino](../index.html)**</center>
+
+    Analog-to-Digital Conversion
+    ===========================
+    Dunia tempat kita tinggal merupakan dunia analog.
+    Semua fenomena alam yang terjadi merupakan fenomena analog, bukan hanya binary 0 atau 1.
+    Contohnya matahari mulai dari terbit sampai terbenam akan menghasilkan intensitas cahaya yang berubah perlahan-lahan tidak hanya nyala dan mati seperti lampu.
+    
+    Dalam matematika, nilai analog memiliki jumlah nilai yang tak terhingga di antara kedua nilai.
+    Sebagai contoh pada Figure [fig:analog_digital] sebelah kiri menampilkan nilai analog dari tegangan 0-5V.
+    Setelah nilai 2.7V terdapat 2.71V, 2.718V, 2.7182V, dan seterusnya sampai tak terhingga.
+    Akan tetapi mikrokontroler hanya dapat merepresentasikan nilai yang terbatas seperti pada Figure [fig:analog_digital] sebelah kanan.
+    Sebagai contoh tipe data 8-bit hanya bisa menyimpan data dari 0-255.
+    Di antara nilai 139 dan 140 tidak ada nilai lain.
+
+    ![Figure [fig:analog_digital]: Konversi nilai analog ke digital](analog_digital.jpg width=450px)
+
+    Mikrokontroler membutuhkan module yang bernama analog-to-digital converter (ADC) untuk melakukan konversi dari analog ke digital.
+    ADC akan melakukan konversi dari nilai analog misalnya dari 0-5V ke nilai digital misalnya 0-255.
+    Dengan menggunakan ADC, mikrokontroler dapat membaca nilai tegangan dari misalnya potensiometer atau sensor yang memiliki output tegangan analog.
+
+    Sinyal Analog dan Digital
+    ===========================
+    Dalam elektronik, sinyal merupakan nilai tegangan yang berubah-ubah terhadap waktu.
+    Sinyal analog memiliki sample tegangan tak terhingga terhadap waktu.
+    Selain itu nilai amplitude-nya juga bersifat tak terhingga banyaknya.
+    Sedangkan sinyal digital memiliki sample tegangan yang terbatas terhadap waktu.
+    Selain itu nilai amplitude-nya juga bersifat terbatas.
+
+    ADC akan melakukan proses yang bernama sampling untuk mengubah jumlah sample terhadap waktu yang tak terhingga menjadi terbatas.
+    Selain itu ADC juga akan melakukan proses yang bernama quantization untuk mengubah nilai amplitude yang tak terhingga menjadi terbatas. 
+
+    Figure [fig:samp_quant] atas menampilkan proses sampling.
+    Jumlah sample pada sumbu waktu yang dihasilkan akan menjadi terbatas.
+    Figure [fig:samp_quant] bawah menampilkan proses quantization.
+    Nilai amplitude yang dihasilkan akan menjadi terbatas.
+
+    ![Figure [fig:samp_quant]: Proses sampling dan quantization. Sumber: [audiolabs-erlangen.de](https://www.audiolabs-erlangen.de/resources/MIR/FMP/C2/C2S2_DigitalSignalQuantization.html)](samp_quant.png width=450px)
+
+    Figure [fig:adc_process] menampilkan proses ADC ketika membaca sinyal analog.
+    Sinyal tersebut dapat berasal dari sensor.
+    Sinyal yang berwarna merah merupakan sinyal analog, sedangkan sinyal yang berwarna hijau merupakan sinyal digital.
+    Setiap periode sampling, nilai amplitude sinyal tersebut akan diubah menjadi nilai digital.
+
+    ![Figure [fig:adc_process]: Proses ADC. Sumber: [ecedunia.blogspot.com](http://ecedunia.blogspot.com/2016/03/quantization.html)](adc_process.png width=450px)
+
+    Proses sampling dan quantization ditentukan oleh kecepatan sampling dan resolusi ADC tersebut.
+    Misalkan ADC dengan kecepatan sampling 1 MSPS dan resolusi 8-bit akan menghasilkan 1 juta sample per detik dan quantization sebanyak 256 step. 
+
+    Peripheral ADC ESP32
+    ===========================
+    Mikrokontroler ESP32 memiliki dua ADC.
+    ADC1 memiliki 8 channel dan ADC2 memiliki 10 channel.
+    Sehingga total ada 18 channel.
+    Setiap channel mewakili satu pin input analog, tetapi tidak semua channel tersebut dapat digunakan untuk aplikasi kita.
+    Hal ini karena ada beberapa channel yang tidak terhubung ke pin dan ada juga channel yang tidak bisa digunakan ketika Wi-Fi aktif.
+
+    Range tegangan dari ADC tersebut yaitu dari 0-3.3V.
+    Resolusi default ADC tersebut yaitu 12-bit sehingga nilai output-nya dari 0-4095 ($2^{12}$).
+    Walaupun demikian, ADC tersebut dapat dikonfigurasi ke resolusi lain yaitu 9-bit, 10-bit, atau 11-bit. 
+
+    Library ADC
+    ===========================
+    Pada bagian ini, kita akan belajar mengenai fungsi pada library Arduino yang diperlukan untuk menggunakan ADC.
+    Fungsi `analogRead` merupakan fungsi yang perlu kita panggil saat akan membaca nilai ADC.
+    Fungsi tersebut memiliki satu input argument yaitu pin ADC yang akan dibaca nilainya.
+    Nilai return fungsi tersebut bertipe unsigned integer 16-bit yang merupakan nilai ADC yang terbaca. 
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C linenumbers
+    uint16_t analogRead(uint8_t pin);
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [lst:analogread]: Fungsi `analogRead` untuk membaca nilai ADC]
+
+    Sensor Cahaya LDR
+    ===========================
+    Light-dependent resistor (LDR) (atau disebut juga photoresistor atau photocell) merupakan jenis resistor yang nilai hambatannya
+    dapat berubah tergantung intensitas cahaya yang diterima pada permukaannya.
+    Figure [fig:ldr] menampilkan contoh komponen LDR yang ukurannya bervariasi (dalam skala mm). 
+
+    ![Figure [fig:ldr]: Sensor cahaya LDR (dalam skala mm). Sumber: [Wikipedia](https://en.wikipedia.org/wiki/Photoresistor)](ldr.jpg width=300px)
+
+    Hambatan pada LDR akan berkurang ketika intensitas cahayanya bertambah.
+    Fenomena ini disebut juga [photoconductivity](https://en.wikipedia.org/wiki/Photoconductivity).
+    Pada kondisi gelap, LDR dapat memiliki hambatan beberapa mega Ohm (MΩ), sedangkan pada kondisi terang LDR dapat memiliki hambatan beberapa ratus Ohm.
+
+    Rangkaian Sensor Cahaya LDR
+    ===========================
+    Untuk menggunakan LDR sebagai sensor cahaya, kita perlu merangkai sensor tersebut seperti rangkaian pembagi tegangan.
+    Skematik rangkaian tersebut ditampilkan pada Figure [fig:ldr_circuit].
+    Tegangan output dari rangkaian pembagi tegangan tersebut akan dibaca oleh ADC.
+
+    ![Figure [fig:ldr_circuit]: Rangkaian sensor cahaya LDR](ldr_circuit.jpg width=80px)
+
+    Untuk menganalisis rangkaian tersebut, kita bisa menggunakan rumus pembagi tegangan seperti pada eqn. [pembagi_tegangan].
+    \begin{equation}
+        \label{pembagi_tegangan}
+        V_{ADC}=V_{S}\frac{R}{R_{LDR}+R}
+    \end{equation}
+    Dimana:
+
+    * $𝑉_{ADC}$ adalah tegangan output yang akan dihubungkan ke pin ADC,
+    * $𝑉_𝑆$ adalah tegangan supply,
+    * $R$ adalah nilai hambatan resistor tetap, dan
+    * $R_{LDR}$ adalah nilai hambatan LDR.
+
+    Nilai resistor tetap yang digunakan biasanya yaitu $10k\Omega$, sedangkan nilai resistor LDR bervariasi dari beberapa ratus sampai beberapa mega Ohm.
+
+    Sebagai contoh, jika dalam kondisi gelap LDR memiliki hambatan $1M\Omega$ dan hambatan resistor tetap adalah $10k\Omega$. Berapa nilai tegangan output yang akan terbaca oleh ADC? Berapa nilai konversi digital ADC-nya jika resolusi ADC yang digunakan adalah 12-bit? 
+
+    $$V_{ADC}=V_{S}\frac{R}{R_{LDR}+R}=3.3\frac{10k\Omega}{10M\Omega+10k\Omega}=0.032V$$
+
+    Nilai tegangan output yang terbaca oleh ADC adalah $0.032V$.
+    Pada ADC 12-bit, nilai ini akan dikonversi ke nilai digital $0.032\cdot2^{12}=134$.
+
+    Contoh Program
+    ===========================
+    Pada bagian ini akan dibahas satu contoh program ADC untuk membaca sensor cahaya LDR.
+    Nilai sensor yang dibaca ADC akan dikirim ke PC melalui komunikasi serial, kemudian ditampilkan pada program serial monitor. 
+    Program ini bersifat umum untuk pembacaan ADC, apapun sensor yang digunakan asalkan output-nya analog, maka kode pada contoh program ini dapat digunakan.
+
+    Untuk dapat menjalankan contoh program ini diperlukan beberapa komponen:
+    * Development board ESP32
+    * LDR
+    * Resistor 10KΩ
+    * Breadboard
+    * Kabel jumper
+
+    Ilustrasi koneksi dari LDR ke ESP32 ditampilkan pada Figure [fig:bb_ldr].
+    Pin yang digunakan untuk menghubungkan LDR ke ESP32 ditampilkan pada Table [tab:wiring].
+
+    ![Figure [fig:bb_ldr]: Rangkaian breadboard untuk program sensor cahaya LDR](bb_ldr.jpg width=400px)
+
+
+    Sensor Pin        | ESP32 Pin
+    ------------------|------------------
+    LDR output        | D27
+    [Table [tab:wiring]: Koneksi ESP32]
+
+    Listing [lst:adc_ldr] menampilkan contoh program ADC.
+    Berikut ini penjelasan cara kerja program tersebut:
+    * Pada **line 1**, kita membuat sebuah variable bertipe integer untuk menyimpan hasil pembacaan ADC.
+    * Pada **line 6**, kita mengkonfigurasi komunikasi serial.
+    * Pada **line 12**, kita melakukan pembacaan ADC dengan memanggil fungsi `analogRead`, kemudian nilai yang terbaca disimpan pada variable `light_sensor`.
+    * Pada **line 13**, kita mengirim nilai ADC tersebut ke PC.
+    * Pada **line 14**, kita menambahkan delay sebesar 500ms agar pembacaan nilai ADC tidak terlalu cepat.
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C linenumbers
+    int light_sensor = 0;
+
+    void setup()
+    {
+      // Konfigurasi komunikasi serial
+      Serial.begin(9600);
+    }
+    
+    void loop()
+    {
+      // Print nilai LDR ke serial monitor setiap 0.5 detik
+      light_sensor = analogRead(27); // Nilai sensor LDR
+      Serial.println(light_sensor);
+      delay(500);
+    }    
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [lst:adc_ldr]: Contoh program ADC]
+
+    Figure [fig:result] menampilkan hasil dari contoh program ini.
+    Pada kondisi terang, hasil pembacaan ADC sekitar 600,
+    kemudian ketika sensor LDR ditutup dan cahayanya berkurang, maka hasil pembacaan ADC menjadi sekitar 100.
+
+    ![Figure [fig:result]: Hasil pembacaan sensor cahaya LDR pada serial monitor](result.gif width=640px)
+
+    Selain menggunakan serial monitor, kita juga bisa menvisualisasikan nilai sensor cahaya dengan serial plotter seperti pada Figure [fig:plot_light_sensor].
+
+    ![Figure [fig:plot_light_sensor]: Hasil plot sensor cahaya LDR pada serial plotter](plot_light_sensor.png width=640px)
+
+    Repository Kode Program
+    ===========================
+    Kode program ADC untuk pembacaan sensor cahaya LDR dapat didapatkan di repository ini: [adc-light-sensor](https://github.com/klinikarduino/esp32/tree/main/adc-light-sensor).
+
+    <link href='https://fonts.googleapis.com/css?family=Roboto:400,300,100,100italic,300italic,400italic,700' rel='stylesheet' type='text/css'>
+    <script>window.markdeepOptions = {'tocStyle':'long'};</script>
+    <script src="../../markdeep.min.js"></script>
+    <script>window.alreadyProcessedMarkdeep||(document.body.style.visibility="visible")</script>
+</body>

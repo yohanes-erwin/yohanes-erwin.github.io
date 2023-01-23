@@ -1,0 +1,81 @@
+<head>
+    <meta charset="utf-8" lang="en">
+    <link rel="icon" href="../../logo.png">
+    <style class="fallback">
+    body {
+        visibility: hidden;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    </style>
+</head> 
+<body>
+    **Analisis Rangkaian Resistor Pull-Up**
+    **Instagram: [@klinikarduino](https://www.instagram.com/klinikarduino/)**
+    **Facebook: [@klinikarduino](https://web.facebook.com/klinikarduino)**
+    **by [Erwin Setiawan](https://yohanes-erwin.github.io/)**
+    
+    <center>**[Pemrograman Arduino](../index.html)**</center>
+
+    State Floating pada GPIO Input
+    ===========================
+    Jika kita mengkonfigurasi sebuah pin GPIO di mikrokontroler sebagai input, dan pin tersebut tidak terhubung dengan apapun,
+    maka pin tersebut berada dalam kondisi floating.
+    Kondisi floating yaitu berarti logika yang terbaca tidak terdefinisi dengan jelas, bisa logika 0 atau 1.
+    Ataupun bisa juga terjadi dimana level tegangannya berada di antara $V_{IH}$ dan $V_{IL}$.
+    Electrical noise dari mesin-mesin besar dapat menyebabkan pin floating berubah-ubah nilainya.
+
+    Oleh karena itu, kita perlu menjaga input pin tersebut pada nilai logika 0 atau 1 dengan resistor pull-down atau pull-up.
+    Ketika kita menggunakan resistor pull-up, maka pin tersebut terhubung ke tegangan supply, maka pin tersebut memiliki nilai 1.
+    Ketika kita menggunakan resistor pull-down, maka pin tersebut terhubung ke GND, maka pin tersebut memiliki nilai 0.
+
+    Dalam artikel ini, saya hanya akan membahas mengenai resistor pull-up secara detail.
+    Karena resistor pull-up lebih banyak digunakan daripada resistor pull-down.
+    Untuk resistor pull-down cara analisisnya mirip seperti resistor pull-up.
+
+    Analisis Resistor Pull-Up
+    ===========================
+    Aplikasi resistor pull-up dapat kita temui pada bus I2C, pull-up pada pin reset mikrokontroler, dll.
+    Figure [fig:active_low_button] menampilkan rangkaian push button dengan resistor pull-up.
+    Supply dihubungkan dengan resistor dan push button secara seri kemudian terhubung ke GND.
+    Pin GPIO input terhubung di antara resistor dan push button tersebut.
+    Berikut ini cara kerja rangkaian push button dengan resistor pull-up:
+
+    * Ketika push button ditekan, maka GPIO input akan bernilai logika LOW.
+    * Ketika push button dilepas, maka GPIO input akan bernilai logika HIGH.
+
+    ![Figure [fig:active_low_button]: Rangkaian push button dengan resistor pull-up](../digital_input/active_low_button.png width=350px)
+
+    **Bagaimana analisinya ketika push button ditekan, GPIO input bisa bernilai logika LOW, dan sebaliknya?**
+
+    Figure [fig:active_low_button_analysis] menampilkan analisis rangkaian push button dengan resistor pull-up.
+    Ketika sebuah pin GPIO dikonfigurasi sebagai input, maka pin tersebut memiliki impedansi yang sangat tinggi (biasanya disebut dengan istilah high impedance).
+    Pada analisis ini kita asumsikan sebesar $1M\Omega$ dan nilai resistor pull-up yang digunakan yaitu $10k\Omega$.
+
+    ![Figure [fig:active_low_button_analysis]: Analisis rangkaian push button dengan resistor pull-up](../digital_input/active_low_button_analisis.png width=700px)
+
+    Berikut ini analisis rangkaian resistor pull-up:
+    * Ketika push button ditekan, maka kita bisa membuat rangkaian pengganti dari push button dengan sebuah resistor yang nilainya kecil sekali mendekati nol. Di sini kita gunakan nilai $1\Omega$. Kemudian kita hitung nilai $R_{par}$ yaitu nilai pengganti paralel dari $1M\Omega$ dan $1\Omega$. Setelah itu kita hitung nilai $V_i$ yaitu nilai tegangan input yang akan dibaca oleh GPIO dengan rumus pembagi tegangan. Akan didapatkan hasil $V_i\approx 0V$. Sehingga akan terbaca logika 0 atau LOW.
+    * Ketika push button tidak ditekan, maka resistor pengganti push button menjadi tidak ada. Rangkaiannya hanya berupa resistor pull-up yang dirangkai seri dengan impedansi GPIO input. Untuk menghitung $V_i$, kita yang perlu menggunakan rumus pembagi tegangan. Akan didapatkan hasil $V_i\approx 3.3V$. Sehingga akan terbaca logika 1 atau HIGH.
+
+    **Bagaimana menentukan nilai resistor untuk pull-up?**
+
+    Kita ambil contoh analisis untuk level tegangan 3.3V pada ESP32 seperti pada Figure [fig:level_tegangan_detail].
+    
+    ![Figure [fig:level_tegangan_detail]: Detail level tegangan 3.3V](../digital_output/level_tegangan_detail.jpg width=400px)
+
+    Kita ambil contoh kasus ketika push button ditekan. Apa yang akan terjadi jika nilai resistor pull-up diperkecil sampai nilai yang cukup ekstrim misalkan $1\Omega$? Nilai $V_i$ akan bernilai $1.65V$.
+    Nilai ini lebih daripada batas $V_{IL}$ sehingga tidak akan terbaca sebagai logika LOW.
+    
+    Kemudian kita ambil contoh kasus ketika push button dilepas. Apa yang akan terjadi jika nilai resistor pull-up diperbesar sampai nilai yang cukup ekstrim misalkan $1M\Omega$? Nilai $V_i$ akan bernilai $1.65V$ juga.
+    Nilai ini kurang dari batas $V_{IH}$ sehingga tidak akan terbaca sebagai logika HIGH.
+
+    Sehingga dari analisis tersebut dapat kita simpulkan bahwa nilai resistor pull-up tidak boleh terlalu kecil dan tidak boleh terlalu besar.
+    Nilai resistor pull-up yang biasa digunakan yaitu $3.3k\Omega - 10k\Omega$.
+    Untuk design yang membutuhkan low power, maka nilai resistor pull-up yang biasa digunakan yaitu $50k\Omega - 100k\Omega$.
+    Nilai resistor pull-up yang kecil disebut dengan istilah strong pull-up, dan nilai resistor pull-up yang besar disebut dengan istilah weak pull-up.
+
+    <link href='https://fonts.googleapis.com/css?family=Roboto:400,300,100,100italic,300italic,400italic,700' rel='stylesheet' type='text/css'>
+    <script>window.markdeepOptions = {'tocStyle':'long'};</script>
+    <script src="../../markdeep.min.js"></script>
+    <script>window.alreadyProcessedMarkdeep||(document.body.style.visibility="visible")</script>
+</body>

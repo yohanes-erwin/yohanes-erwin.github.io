@@ -1,0 +1,143 @@
+<head>
+    <meta charset="utf-8" lang="en">
+    <link rel="icon" href="../../logo.png">
+    <style class="fallback">
+    body {
+        visibility: hidden;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    </style>
+</head> 
+<body>
+    **Bab 2 Pengenalan Arduino**
+    **Instagram: [@klinikarduino](https://www.instagram.com/klinikarduino/)**
+    **Facebook: [@klinikarduino](https://web.facebook.com/klinikarduino)**
+    **by [Erwin Setiawan](https://yohanes-erwin.github.io/)**
+    
+    <center>**[Pemrograman Arduino](../index.html)**</center>
+
+    Apa itu Arduino?
+    ===========================
+    Arduino merupakan ekosistem hardware dan software yang bersifat open source. Hardware Arduino yaitu board mikrokontroler yang dibuat oleh Arduino.
+    Ada banyak board mikrokontroler official Arduino dengan berbagai jenis mikrokontroler yang digunakan.
+    Selain yang official, terdapat juga board mikrokontroler third party yang bisa digunakan pada ekosistem Arduino.
+    
+    Software Arduino sendiri terdiri dari Arduino IDE yang digunakan untuk mengedit kode dan melakukan proses compile.
+    Selain itu juga termasuk library Arduino untuk berbagai macam module seperti sensor, display, dan komponen lainnya.
+    Arduino juga menyediakan platform cloud untuk memudahkan kita dalam membuat prototype IoT.
+
+    Hardware Official Arduino
+    ===========================
+
+    ![Figure [fig:arduino_uno_mega]: Arduino Uno dan Arduino Mega](arduino_uno_mega.jpg width=550px)
+
+    Pada Figure [fig:arduino_uno_mega] memperlihatkan board Arduino Uno dan Arduino Mega. Arduino Uno merupakan board Arduino yang paling populer.
+    Board ini menggunakan mikrokontroler ATmega328p yang bekerja pada kecepatan clock 16 MHz. Mikrokontroler ini menggunakan arsitektur AVR 8-bit.
+    Interface pemrograman yang digunakan oleh board ini yaitu USB type B seperti pada printer.
+
+    Arduino Mega mirip seperti Arduino Uno, tetapi menggunakan mikrokontroler yang lebih besar ukuran memori dan jumlah IO-nya.
+    Board ini menggunakan mikrokontroler ATmega2560 yang bekerja pada kecepatan clock 16 MHz.
+    Interface pemrograman yang digunakan oleh board ini juga sama seperti Arduino Uno yaitu USB type B.
+
+    ![Figure [fig:arduino_leo_due]: Arduino Leonardo dan Arduino Due](arduino_leo_due.jpg width=550px)
+
+    Pada Figure [fig:arduino_leo_due] memperlihatkan board Arduino Leonardo dan Arduino Due.
+    Arduino Leonardo merupakan kembaran Arduino Uno karena sangat mirip dari sisi form factor PCB-nya dan jumlah IO-nya.
+    Perbedaannya yaitu interface pemrograman yang digunakannya adalah USB micro. Board ini menggunakan mikrokontroler ATmega32u.
+
+    Arduino Due memiliki form factor seperti Arduino Mega, tetapi menggunakan mikrokontroler yang berbeda yaitu SAM3X8E ARM®Cortex®-M3 yang memiliki arsitektur 32-bit. Mikrokontroler ini bekerja pada kecepatan clock 84 MHz.
+    Tidak seperti Arduino Uno, Mega, dan Leonardo yang bekerja pada tegangan 5V, Arduino Due bekerja pada tegangan 3.3V.
+
+    ![Figure [fig:arduino_micro_nano]: Arduino Micro, Arduino Nano, dan Arduino Nano Every](arduino_micro_nano.jpg width=600px)
+
+    Figure [fig:arduino_micro_nano] memperlihatkan board Arduino Micro, Arduino Nano, dan Arduino Nano Every.
+    Ketiga board ini memiliki ukuran yang lebih kecil dari board-board sebelumnya dan dapat dipasang pada breadboard.
+    Ketiga board ini memiliki tegangan kerja 5V.
+
+    Arduino Micro merupakan versi Arduino Leonardo yang form factor-nya diperkecil, karena keduanya sama-sama menggunakan mikrokontroler ATmega32u. Interface pemrograman yang digunakan yaitu USB micro.
+
+    Arduino Nano merupakan versi Arduino Uno yang form factor-nya diperkecil, karena keduanya sama-sama menggunakan mikrokontroler ATmega328p.
+    Interface pemrograman yang digunakan yaitu USB mini-B.
+
+    Arduino Nano Every merupakan evolusi dari Arduino Nano. Board ini menggunakan mikrokontroler ATmega4809 yang memiliki ukuran memori lebih besar, tetapi arsitekturnya masih AVR 8-bit. Interface pemrograman yang digunakan sudah diganti menjadi USB micro.
+
+    ![Figure [fig:arduino_nano]: Arduino Nano 33 IoT, Arduino Nano 33 BLE, dan Arduino Nano 33 BLE Sense](arduino_nano.jpg width=600px)
+
+    Figure [fig:arduino_micro_nano] memperlihatkan board Arduino Nano IoT, Arduino Nano 33 BLE, dan Arduino Nano 33 BLE Sense.
+    Ketiga board ini merupakan evolusi dari Arduino Nano Every, karena memiliki form factor yang sama dan interface pemrograman yang digunakannya juga USB micro. Akan tetapi, ketiga board ini memiliki tegangan kerja 3.3V.
+
+    Arduino Nano IoT menggunakan mikrokontroler SAMD21 yang menggunakan CPU ARM®Cortex®-M0+ dengan arsitektur 32-bit. Mikrokontroler ini bekerja pada kecepatan clock 48 MHz.
+    Selain itu juga sudah terdapat Wi-Fi 802.11 b/g/n, Bluetooth 4.2, dan sensor IMU 6-axis, sehingga board ini cocok digunakan untuk project-project IoT.
+
+    Arduino Nano 33 BLE menggunakan mikrokontroler nRF52840 yang menggunakan CPU ARM®Cortex®-M0+ dengan arsitektur 32-bit. Mikrokontroler ini bekerja pada kecepatan clock 64 MHz. Di dalam mikrokontroler ini sudah terdapat module Bluetooth 5.0.
+    Selain itu, pada board ini sudah terdapat sensor IMU 9-axis. Akan tetapi, tidak ada Wi-Fi pada board ini.
+
+    Arduino Nano 33 BLE Sense sama seperti Arduino Nano 33 BLE, karena menggunakan board PCB dan mikrokontroler yang sama.
+    Perbedaannya adalah pada sensor-sensor yang dimilikinya. Sesuai dengan namanya "Sense", maka board ini memiliki banyak sensor yang tidak ada pada Arduino Nano 33 BLE.
+    Sensor-sensor tersebut yaitu humidity, temperature, barometric, microphone, gesture, proximity, light color, dan light intensity.
+    Board ini cocok untuk digunakan pada project embedded AI. 
+
+    Hardware Third Party
+    ===========================
+
+    ![Figure [fig:arduino_stm32]: STM32 Bluepill dan STM32 Nucleo-64](arduino_stm32.jpg width=600px)
+
+    Figure [fig:arduino_stm32] memperlihatkan contoh board berbasis mikrokontroler STM32 yang bisa juga digunakan pada ekosistem Arduino.
+    Untuk memprogram mikrokontroler STM32 dengan Arduino software, kita membutuhkan library untuk board tersebut yang bernama [STM32duino](https://github.com/stm32duino).
+    
+    STM32 Bluepill merupakan board yang harganya cukup terjangkau. Board ini menggunakan mikrokontroler STM32F1.
+    Mikrokontroler ini menggunakan CPU ARM®Cortex®-M3 dengan arsitektur 32-bit. Mikrokontroler ini memiliki kecepatan clock maksimum 72 MHz.
+
+    STM32 Nucleo merupakan borad yang dibuat oleh STMicroelectronics yang juga merupakan pembuat mikrokontroler STM32.
+    STM32 Nucleo tersedia dalam tiga jenis form factor yaitu STM32 Nucleo-32, STM32 Nucleo-64, dan STM32 Nucleo-144.
+    Mikrokontroler yang digunakan pada board tersebut bermacam-macam. Untuk lebih jelasnya dapat mengunjungi website [STM32 Nucleo](https://www.st.com/en/evaluation-tools/stm32-nucleo-boards.html).
+
+    ![Figure [fig:arduino_esp]: ESP8266 dan ESP32](arduino_esp.jpg width=600px)
+
+    Figure [fig:arduino_esp] memperlihatkan board ESP8266 dan ESP32. Mikrokontroler pada board tersebut dibuat oleh Espressif Systems.
+    Banyak sekali development board berbasis ESP8266 dan ESP32 yang tersedia di pasaran dan harganya cukup terjangkau.
+    Tersedia library untuk memprogram board tersebut dengan Arduino yaitu [Arduino core for ESP8266](https://github.com/esp8266/Arduino) dan [Arduino core for ESP32](https://github.com/espressif/arduino-esp32). 
+
+    ESP8266 menggunakan CPU Tensilica Xtensa L106 (32-bit) yang bekerja pada kecepatan clock 80 MHz.
+    Di dalam chip mikrokontroler ini sudah terdapat module Wi-Fi 802.11 b/g/n.
+    Untuk mempelajari jenis module ESP8266 yang tersedia di pasaran, silahkan mengunjungi website [esp8266.net](http://esp8266.net/).
+
+    ESP32 menggunakan CPU Tensilica Xtensa L106 (32-bit) yang bekerja pada kecepatan clock 160 atau 240 MHz.
+    Di dalam chip mikrokontroler ini sudah terdapat module Wi-Fi 802.11 b/g/n dan Bluetooth 4.2.
+    Untuk mempelajari jenis module ESP32 yang tersedia di pasaran, silahkan mengunjungi website [esp32.net](http://esp32.net/).
+
+    Software Arduino
+    ===========================
+    Selain merupakan open source hardware, Arduino juga merupakan open source software.
+    Figure [fig:arduino_ide] memperlihatkan Arduino IDE yang kita gunakan untuk menulis, meng-compile, dan meng-upload kode ke board. 
+
+    ![Figure [fig:arduino_ide]: Arduino IDE](arduino_ide.jpg width=600px)
+
+    Selain versi offline-nya, Arduino IDE juga tersedia pada versi online yang bernama Arduino Web Editor seperti pada Figure [fig:arduino_web_ide].
+    Arduino Web Editor berfungsi untuk menulis, meng-compile, dan meng-upload kode ke board, kemudian kita juga bisa menyimpan kode kita di cloud.
+
+    ![Figure [fig:arduino_web_ide]: Arduino Web Editor](arduino_web_ide.jpg width=600px)
+
+    Figure [fig:arduino_iot_cloud] merupakan Arduino IoT Cloud. Arduino IoT Cloud adalah aplikasi cloud yang memudahkan kita untuk melakukan
+    development project IoT. Terdapat dashboard yang memudahkan kita untuk memonitor sensor-sensor.
+
+    ![Figure [fig:arduino_iot_cloud]: Arduino IoT Cloud](arduino_iot_cloud.jpg width=600px)
+
+    Flow Pemrograman Arduino
+    ===========================
+    Figure [fig:programming_flow] mengilustrasikan flow pemrograman Arduino. Flow dimulai dari ide yang akan kita buat.
+    Ide kita tersebut dibuat menjadi kode Arduino dengan bantuan Arduino editor baik offline maupun online.
+    Kemudian, kode Arduino tersebut akan di-compile menjadi kode mesin dengan Arduino compiler.
+    Terakhir, kode mesin tersebut akan di-upload ke board Arduino dengan menggunakan Arduino uploader.
+
+    ![Figure [fig:programming_flow]: Flow pemrograman Arduino](programming_flow.jpg width=300px)
+
+    Arduino editor, compiler, dan uploader merupakan bagian dari Arduino IDE.
+    Software Arduino IDE dapat di-download dari link [ini](https://www.arduino.cc/en/software).
+    Untuk menggunakan Arduino IDE versi online, maka dapat mengunjungi link [ini](https://create.arduino.cc/editor).
+
+    <link href='https://fonts.googleapis.com/css?family=Roboto:400,300,100,100italic,300italic,400italic,700' rel='stylesheet' type='text/css'>
+    <script>window.markdeepOptions = {'tocStyle':'long'};</script>
+    <script src="../../markdeep.min.js"></script>
+    <script>window.alreadyProcessedMarkdeep||(document.body.style.visibility="visible")</script>
+</body>

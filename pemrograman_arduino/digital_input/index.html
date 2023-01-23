@@ -1,0 +1,323 @@
+<head>
+    <meta charset="utf-8" lang="en">
+    <link rel="icon" href="../../logo.png">
+    <style class="fallback">
+    body {
+        visibility: hidden;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    </style>
+</head> 
+<body>
+    **Bab 5 Digital Input**
+    **Instagram: [@klinikarduino](https://www.instagram.com/klinikarduino/)**
+    **Facebook: [@klinikarduino](https://web.facebook.com/klinikarduino)**
+    **by [Erwin Setiawan](https://yohanes-erwin.github.io/)**
+    
+    <center>**[Pemrograman Arduino](../index.html)**</center>
+
+    Review GPIO
+    ===========================
+    Bagian ini merupakan review tentang GPIO. Jika Anda sudah memahami tentang GPIO dari [bab sebelumnya](../digital_output/index.html#generalpurposei/o), maka Anda bisa lewati bagian ini.
+
+    GPIO memiliki kepanjangan General Purpose Input Output.
+    GPIO merupakan interface paling sederhana yang bisa dihubungkan dengan sensor atau aktuator.
+    GPIO bisa difungsikan sebagai input atau output.
+    Ketika GPIO difungsikan sebagai input, maka GPIO bisa digunakan untuk membaca nilai digital (0 atau 1) dari sensor.
+    Ketika GPIO difungsikan sebagai output, maka GPIO bisa digunakan untuk mengontrol aktuator dengan nilai digital.
+
+    ![Figure [fig:gpio]: Ilustrasi penggunaan GPIO](../digital_output/gpio.png width=500px)
+
+    Figure [fig:gpio] mengilustrasikan GPIO yang dihubungkan dengan LED dan button.
+    GPIO difungsikan sebagai input untuk membaca nilai button, sedangkan untuk mengontrol LED, maka GPIO difungsikan sebagai output.
+
+    Review Level Tegangan
+    ===========================
+    Bagian ini merupakan review tentang level tegangan. Jika Anda sudah memahami tentang level tegangan dari [bab sebelumnya](../digital_output/index.html#leveltegangan), maka Anda bisa lewati bagian ini.
+
+    GPIO bekerja dalam dua level diskrit yaitu logika low (0) dan high (1).
+    Kedua logika tersebut direpresentasikan oleh dua level tegangan yang berbeda atau disebut juga sebagai level tegangan.
+    Level tegangan yang paling sering digunakan yaitu 0V untuk logika 0 dan 5V untuk logika 1.
+    Salah satu contoh board yang menggunakan level tegangan ini yaitu Arduino Uno.
+
+    Ada juga level tegangan lain yang sering digunakan yaitu 0V untuk logika 0 dan 3.3V untuk logika 1 seperti pada Figure [fig:level_tegangan].
+    Board-board berbasis ESP32 menggunakan level tegangan ini.
+    Level tegangan sangat penting karena berhubungan tegangan kerja dari sensor atau actuator kita.
+    Sensor yang bekerja pada 5V tidak bisa dihubungkan secara langsung ke mikrokontroler yang bekerja pada 3.3V,
+    karena dapat merusak mikrokontroler tersebut. 
+
+    ![Figure [fig:level_tegangan]: Level tegangan 3.3V](../digital_output/level_tegangan.png width=500px)
+
+    Sebelum kita menggunakan suatu board mikrokontroler, sebaiknya kita mengetahui level tegangan yang digunakan oleh board tersebut
+    agar tidak terjadi kesalahan yang dapat merusak board tersebut.
+
+    Figure [fig:level_tegangan] hanya menggambarkan level tegangan secara sederhana.
+    Pada kenyataannya level tegangan yang merepresentasikan nilai HIGH dan LOW itu berupa range tegangan seperti pada Figure [fig:level_tegangan_detail].
+    Gambar tersebut merupakan detail level tegangan 3.3V pada ESP32.
+
+    * $V_{OH}$: tegangan **OUTPUT** minimum yang akan dihasilkan ketika memberikan logika **HIGH**.
+    * $V_{IH}$: tegangan **INPUT** minimum agar terbaca sebagai logika **HIGH**.
+    * $V_{IL}$: tegangan **INPUT** maksimum agar terbaca sebagai logika **LOW**.
+    * $V_{OL}$: tegangan **OUTPUT** maksimum yang akan dihasilkan ketika memberikan logika **LOW**.
+
+    ![Figure [fig:level_tegangan_detail]: Detail level tegangan 3.3V](../digital_output/level_tegangan_detail.jpg width=500px)
+
+    Tegangan output minimum untuk logika HIGH $(V_{OH})$ adalah $2.64V$.
+    Ini berarti ketika ESP32 mengeluarkan logika HIGH, maka tegangannya selalu lebih besar dari $2.64V$ sampai $3.3V$.
+    Tegangan input minimum untuk logika HIGH $(V_{IH})$ adalah $2.475V$.
+    Ini berarti nilai tegangan lebih besar dari $2.475V$ sampai $3.3V$ akan terbaca sebagai logika HIGH.
+
+    Tegangan output maksimum untuk logika LOW $(V_{OL})$ adalah $0.33V$.
+    Ini berarti ketika ESP32 mengeluarkan logika LOW, maka tegangannya selalu lebih kecil dari $0.33V$ sampai $0V$.
+    Tegangan input maksimum untuk logika LOW $(V_{IH})$ adalah $0.825V$.
+    Ini berarti nilai tegangan lebih kecil dari $0.825V$ sampai $0V$ akan terbaca sebagai logika LOW.
+
+    Ada perbedaan tegangan sebesar $0.165V$ antara tegangan output dan tegangan input HIGH. Ini biasanya disebut sebagai noise margin.
+    Noise margin pada tegangan output dan tegangan input LOW yaitu sebesar $0.495V$.
+
+    Kemudian, apa yang akan terjadi jika tegangannya berada di antara $0.33V$ dan $2.475V$?
+    Tegangan tersebut tidak memiliki nilai logika yang terdefinisi atau disebut juga sebagai floating.
+    Ketika suatu pin dalam keadaan floating, maka tidak ada kepastian nilai logikanya apakah HIGH atau LOW,
+    karena bisa saja nilai logikanya sedang berosilasi antara HIGH dan LOW yang diakibatkan oleh noise eksternal.
+
+    Digital Input
+    ===========================
+    Digital input merupakan cara paling sederhana yang bisa dilakukan mikrokontroler untuk membaca logic state dari komponen lain.
+    Kita bisa menggunakan GPIO sebagai digital input untuk membaca komponen atau sensor digital seperti button, keypad, rotary encoder, PIR, dll.
+
+    ![Figure [fig:digital_input]: Digital input dapat digunakan untuk membaca komponen atau sensor digital](digital_input.png width=350px)
+
+    Sebelum menghubungkan sensor ke pin GPIO mikrokontroler, hal penting yang perlu diperhatikan adalah level tegangannya.
+    Pastikan level tegangan sensor dan mikrokontrolernya sama agar tidak terjadi kerusakan.
+
+    ![Figure [fig:doitesp32devkit_pinout]: Pin pada board DOIT ESP32 DevKit v1 (versi 30 pins). Sumber: [Random Nerd Tutorials](https://randomnerdtutorials.com/getting-started-with-esp32/)](../bahasa_c/doitesp32devkit_pinout.png width=700px)
+
+    Figure [fig:doitesp32devkit_pinout] memperlihatkan daftar pin pada board DOIT ESP32 DevKit v1 yang dapat digunakan sebagai GPIO untuk digital input.
+
+    Library Digital Input
+    ===========================
+    Pada library Arduino sudah terdapat fungsi-fungsi untuk memudahkan kita menggunakan GPIO sebagai digital input.
+    Dua fungsi utama yang penting yaitu `pinMode` dan `digitalRead`.
+
+    Fungsi `pinMode` memiliki dua input argument yaitu pin GPIO yang akan kita konfigurasi dan mode GPIO.
+    Mode GPIO yang tersedia pada ESP32 yaitu `OUTPUT`, `INPUT`, `INPUT_PULLUP`, dan `INPUT_PULLDOWN`.
+    Untuk GPIO output kita menggunakan mode `OUTPUT`, sedangkan untuk GPIO input terdapat tiga pilihan yaitu `INPUT`, `INPUT_PULLUP`, dan `INPUT_PULLDOWN`.
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C linenumbers
+    void pinMode(uint8_t pin, uint8_t mode);
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [lst:pinmode]: Fungsi `pinMode` untuk mengkonfigurasi mode GPIO]
+
+    Fungsi `digitalRead` memiliki satu input argument yaitu pin GPIO yang akan kita baca nilainya.
+    Fungsi tersebut memiliki return value bertipe data `int` yang merupakan nilai logika yang terbaca dari pin tersebut (`LOW` atau `HIGH`).
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C linenumbers
+    int digitalRead(uint8_t pin);
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [lst:digitalread]: Fungsi `digitalRead` untuk membaca nilai GPIO input]
+
+    Fungsi `pinMode` biasanya dipanggil di dalam fungsi `setup`, sedangkan fungsi `digitalread` biasanya dipanggil di dalam fungsi `loop`.
+
+    Push Button
+    ===========================
+    Push button atau switch merupakan komponen elektronika yang berfungsi untuk menyambungkan atau memutuskan jalur aliran listrik.
+    Figure [fig:button] menampilkan berbagai macam jenis push button berdasarkan bentuknya.
+    Push button seperti ini biasa disebut juga tactile switch.
+
+    ![Figure [fig:button]: Berbagai macam jenis push button berdasarkan bentuknya](button.png width=400px)
+
+    Rangkaian Push Button
+    ===========================
+    Sama seperti rangkaian LED, pada rangkaian push button juga terdapat dua jenis rangkaian dasar yaitu rangkaian active-high dan rangkaian active-low.
+    Perbedaan antara rangkaian active-high dan active-low yaitu pada nilai logika yang dihasilkan ketika push button tersebut ditekan.
+
+    Rangkaian Push Button Active-High
+    ---------------------------
+    Figure [fig:active_high_button] menampilkan rangkaian push button active-high.
+    Pada rangkaian ini, supply dihubungkan dengan push button dan resistor secara seri kemudian terhubung ke GND.
+    Pin GPIO input dihubungkan di antara push button dan resistor tersebut.
+    Berikut ini cara kerja rangkaian push button active-high:
+
+    * Ketika push button ditekan, maka GPIO input akan bernilai logika HIGH.
+    * Ketika push button dilepas, maka GPIO input akan bernilai logika LOW.
+
+    ![Figure [fig:active_high_button]: Rangkaian push button active-high](active_high_button.png width=350px)
+
+    Rangkaian push button active-high menggunakan resistor yang dihubungkan ke GND.
+    Resistor ini sering disebut juga sebagai resistor pull-down. 
+
+    Kesimpulannya, pada rangkaian push button active-high, ketika push button ditekan, maka GPIO akan bernilai HIGH, dan berlaku sebaliknya. Sesuai dengan namanya, active-high, ketika button diaktifkan (ditekan), maka akan menghasilkan logika HIGH. 
+
+    Rangkaian Push Button Active-Low
+    ---------------------------
+    Figure [fig:active_low_button] menampilkan rangkaian push button active-low.
+    Pada rangkaian ini, supply dihubungkan dengan resistor dan push button secara seri kemudian terhubung ke GND.
+    Pin GPIO input dihubungkan di antara resistor dan push button tersebut.
+    Berikut ini cara kerja rangkaian push button active-low:
+
+    * Ketika push button ditekan, maka GPIO input akan bernilai logika LOW.
+    * Ketika push button dilepas, maka GPIO input akan bernilai logika HIGH.
+
+    ![Figure [fig:active_low_button]: Rangkaian push button active-low](active_low_button.png width=350px)
+
+    Rangkaian push button active-low menggunakan resistor yang dihubungkan ke supply.
+    Resistor ini sering disebut juga sebagai resistor pull-up. 
+
+    Kesimpulannya, pada rangkaian push button active-low, ketika push button ditekan, maka GPIO akan bernilai LOW, dan berlaku sebaliknya. Sesuai dengan namanya, active-low, ketika button diaktifkan (ditekan), maka akan menghasilkan logika LOW. 
+
+    Nilai Resistor untuk Push Button
+    ---------------------------
+    Rule of thumb untuk nilai resistor pull-down atau pull-up yang biasa digunakan yaitu $3.3k\Omega - 10k\Omega$.
+    Untuk design yang membutuhkan low power, maka nilai resistor pull-down atau pull-up yang biasa digunakan yaitu $50k\Omega - 100k\Omega$.
+    Untuk analisis lebih detail dari resistor pull-up dapat dipelajari pada artikel [Analisis Rangkaian Resistor Pull-Up](../pull_up/index.html).
+
+    Contoh Program
+    ===========================
+    Pada bagian ini akan dibahas tiga contoh program push button yaitu rangkaian push button pull-down, pull-up, dan pull-up internal.
+    Ketiga program tersebut memiliki fungsionalitas yang sama yaitu untuk membaca push button. Perbedaannya yaitu hanya pada nilai logika yang terbaca saat push button tersebut ditekan.
+
+    Program Push Button Pull-Down
+    ---------------------------
+    Figure [fig:bb_pulldown_button] menampilkan rangkaian untuk program push button pull-down atau active-high.
+    Pin GPIO yang digunakan sebagai input yaitu pin D4. Kemudian kita juga akan menggunakan LED on-board (active-high) yang terhubung ke pin D2.
+
+    ![Figure [fig:bb_pulldown_button]: Rangkaian push button dengan resistor pull-down (active-high)](bb_pulldown.png width=400px)
+
+    Listing [lst:button_pulldown] menampilkan contoh program push button pull-down.
+    Berikut ini penjelasan cara kerja program tersebut:
+
+    * Pada **line 2** dan **line 4**, kita membuat konstanta yang bernama `LEDPIN` dan `BTNPIN` yang berisi pin yang terhubung ke LED on-board dan push button. Di sini kita menggunakan preprocessor `#define` untuk membuat konstanta. Ini merupakan cara lain untuk membuat konstanta selain dengan menggunakan keyword `const`.
+    * Pada **line 9**, kita melakukan inisialisasi terhadap GPIO sebagai pin output dengan memanggil fungsi `pinMode` dan menggunakan argument `OUTPUT`.
+    * Pada **line 11**, kita melakukan inisialisasi terhadap GPIO sebagai pin input dengan memanggil fungsi `pinMode` dan menggunakan argument `INPUT`.
+    * Pada **line 16**, terdapat fungsi `if` yang akan memproses hasil pembacaan push button. Pembacaan push button dilakukan dengan fungsi `digitalRead`. Jika button ditekan, maka hasil pembacaan akan bernilai HIGH.
+    * Pada **line 19**, jika hasil pembacaan push button adalah HIGH, maka kita nyalakan LED on-board dengan menulis logika HIGH menggunakan fungsi `digitalWrite`. 
+    * Pada **line 24**, jika hasil pembacaan push button adalah LOW, maka kita matikan LED on-board dengan menulis logika LOW menggunakan fungsi `digitalWrite`. 
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C linenumbers
+    // LED pin
+    #define LEDPIN  2
+    // Button pin
+    #define BTNPIN  4
+    
+    void setup()
+    {
+      // Konfigurasi GPIO pin sebagai output untuk LED on-board
+      pinMode(LEDPIN, OUTPUT);
+      // Konfigurasi GPIO pin sebagai input untuk button
+      pinMode(BTNPIN, INPUT);
+    }
+    
+    void loop()
+    {
+      if (digitalRead(BTNPIN) == HIGH) // Jika button ditekan (active-high)
+      {
+        // Nyalakan LED on-board
+        digitalWrite(LEDPIN, HIGH);
+      }
+      else
+      {
+        // Matikan LED on-board
+        digitalWrite(LEDPIN, LOW);
+      }
+    }    
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [lst:button_pulldown]: Contoh program push button pull-down]
+
+    Program Push Button Pull-Up
+    ---------------------------
+    Figure [fig:bb_pullup_button] menampilkan rangkaian untuk program push button pull-up atau active-low.
+    Pin GPIO yang digunakan sebagai input yaitu pin D4. Kemudian kita juga akan menggunakan LED on-board (active-high) yang terhubung ke pin D2.
+
+    ![Figure [fig:bb_pullup_button]: Rangkaian push button dengan resistor pull-up (active-low)](bb_pullup.png width=400px)
+
+    Listing [lst:button_pullup] menampilkan contoh program push button pull-up. Pada dasarnya program push button pull-up mirip dengan program sebelumnya untuk push button pull-down. Perbedaannya yaitu hanya pada penggantian nilai komparasi pada fungsi `if` di **line 16** dari HIGH menjadi LOW.
+    Berikut ini penjelasan cara kerja program tersebut:
+
+    * Pada **line 2** dan **line 4**, kita definisikan konstanta untuk GPIO yang terhubung ke LED on-board dan push button.
+    * Pada **line 9** dan **line 11**, kita melakukan inisialisasi terhadap GPIO sebagai pin output dan input.
+    * Pada **line 16**, terdapat fungsi `if` yang akan memproses hasil pembacaan push button. Pembacaan push button dilakukan dengan fungsi `digitalRead`. Jika button ditekan, maka hasil pembacaan akan bernilai LOW.
+    * Pada **line 19**, jika hasil pembacaan push button adalah LOW, maka kita nyalakan LED on-board dengan menulis logika HIGH. 
+    * Pada **line 24**, jika hasil pembacaan push button adalah HIGH, maka kita matikan LED on-board dengan menulis logika LOW.
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C linenumbers
+    // LED pin
+    #define LEDPIN  2
+    // Button pin
+    #define BTNPIN  4
+    
+    void setup()
+    {
+      // Konfigurasi GPIO pin sebagai output untuk LED on-board
+      pinMode(LEDPIN, OUTPUT);
+      // Konfigurasi GPIO pin sebagai input untuk button
+      pinMode(BTNPIN, INPUT);
+    }
+    
+    void loop()
+    {
+      if (digitalRead(BTNPIN) == LOW) // Jika button ditekan (active-low)
+      {
+        // Nyalakan LED on-board
+        digitalWrite(LEDPIN, HIGH);
+      }
+      else
+      {
+        // Matikan LED on-board
+        digitalWrite(LEDPIN, LOW);
+      }
+    }
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [lst:button_pullup]: Contoh program push button pull-up]
+
+    Program Push Button Pull-Up Internal
+    ---------------------------
+    Figure [fig:bb_pullup_internal_button] menampilkan rangkaian untuk program push button pull-up dengan resistor pull-up internal.
+    Resistor pull-up internal merupakan resistor yang berada di dalam IC ESP32 tersebut.
+    Pin GPIO yang digunakan sebagai input yaitu pin D4. Kemudian kita juga akan menggunakan LED on-board (active-high) yang terhubung ke pin D2.
+
+    Salah satu keuntungan menggunakan resistor pull-up internal yaitu kita dapat meminimalkan jumlah komponen eksternal yang dibutuhkan.
+    Pada ESP32, selain resistor pull-up internal, sebenarnya terdapat juga resistor pull-down internal.
+
+    ![Figure [fig:bb_pullup_internal_button]: Rangkaian push button dengan resistor pull-up internal (active-low)](bb_pullup_internal.png width=400px)
+
+    Listing [lst:button_pullup_internal] menampilkan contoh program push button pull-up internal. Pada dasarnya program push button pull-up mirip dengan program sebelumnya untuk push button pull-up. Perbedaannya yaitu hanya pada penggantian argument di fungsi `pinMode` di **line 11** dari `INPUT` menjadi `INPUT_PULLUP`.
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C linenumbers
+    // LED pin
+    #define LEDPIN  2
+    // Button pin
+    #define BTNPIN  4
+    
+    void setup()
+    {
+      // Konfigurasi GPIO pin sebagai output untuk LED on-board
+      pinMode(LEDPIN, OUTPUT);
+      // Konfigurasi GPIO pin sebagai input pull-up untuk button
+      pinMode(BTNPIN, INPUT_PULLUP);
+    }
+    
+    void loop()
+    {
+      if (digitalRead(BTNPIN) == LOW) // Jika button ditekan
+      {
+        // Nyalakan LED on-board
+        digitalWrite(LEDPIN, HIGH);
+      }
+      else
+      {
+        // Matikan LED on-board
+        digitalWrite(LEDPIN, LOW);
+      }
+    }    
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [lst:button_pullup_internal]: Contoh program push button pull-up internal]
+
+    Ketiga program tersebut akan memberikan hasil yang sama yaitu LED on-board menyala ketika push button ditekan.
+
+    Repository Kode Program
+    ===========================
+    Kode program untuk push button pull-down, pull-up, dan pull-up internal dapat didapatkan di repository ini: [button-pull-down](https://github.com/klinikarduino/esp32/tree/main/button-pull-down), [button-pull-up](https://github.com/klinikarduino/esp32/tree/main/button-pull-up), dan [button-pull-up-internal](https://github.com/klinikarduino/esp32/tree/main/button-pull-up-internal).
+
+    <link href='https://fonts.googleapis.com/css?family=Roboto:400,300,100,100italic,300italic,400italic,700' rel='stylesheet' type='text/css'>
+    <script>window.markdeepOptions = {'tocStyle':'long'};</script>
+    <script src="../../markdeep.min.js"></script>
+    <script>window.alreadyProcessedMarkdeep||(document.body.style.visibility="visible")</script>
+</body>

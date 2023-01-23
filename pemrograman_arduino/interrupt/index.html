@@ -1,0 +1,242 @@
+<head>
+    <meta charset="utf-8" lang="en">
+    <link rel="icon" href="../../logo.png">
+    <style class="fallback">
+    body {
+        visibility: hidden;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    </style>
+</head> 
+<body>
+    **Bab 8 Interrupt**
+    **Instagram: [@klinikarduino](https://www.instagram.com/klinikarduino/)**
+    **Facebook: [@klinikarduino](https://web.facebook.com/klinikarduino)**
+    **by [Erwin Setiawan](https://yohanes-erwin.github.io/)**
+    
+    <center>**[Pemrograman Arduino](../index.html)**</center>
+
+    Interrupt
+    ===========================
+    Interrupt merupakan sinyal yang akan melakukan interupsi terhadap CPU yang sedang mengeksekusi kode.
+    Sinyal tersebut bisa berasal dari peripheral internal atau eksternal.
+    Ketika interrupt terjadi, maka CPU akan mengeksekusi kode khusus untuk interrupt tersebut.
+    Setelah selesai, maka CPU akan kembali melanjutkan eksekusi kode yang tertunda tersebut.
+    Proses interrupt digambarkan pada Figure [fig:interrupt_cpu].
+
+    ![Figure [fig:interrupt_cpu]: Proses interrupt](interrupt_cpu.jpg width=600px)
+
+    Kode yang dijalankan pada interrupt biasanya merupakan kode yang bersifat critical dan harus direspon secepat mungkin.
+
+    Perbedaan Polling dan Interrupt
+    ===========================
+    Dalam pemrograman mikrokontroler, ada dua flow eksekusi program yang biasa digunakan untuk menunggu suatu event yaitu polling dan interrupt.
+    Salah satu contoh event yang biasa diperlukan yaitu misalnya membaca penekanan push button.
+
+    Pada metode polling, CPU akan terus menerus melakukan pembacaan GPIO yang terhubung ke push button tersebut, walaupun push button sedang tidak ditekan.
+    Hal ini dilakukan karena CPU tidak tahu kapan push button akan ditekan.
+
+    Pada metode interrupt, CPU tidak perlu terus menerus melakukan pembacaan GPIO.
+    GPIO tersebut akan dihubungkan dengan blok interrupt,
+    kemudian jika terjadi penekanan push button, CPU akan diberi tahu dengan interupsi.
+    Perbedaan polling dan interrupt digambarkan pada Figure [fig:interrupt].
+
+    ![Figure [fig:interrupt]: Perbedaan polling dan interrupt](interrupt.jpg width=600px)
+
+    Analogi yang berguna untuk menjelaskan interrupt yaitu bel rumah.
+    Daripada kita menunggu orang dengan cara mengecek pintu rumah setiap 10 menit sekali,
+    lebih baik kita memasang bel di pintu rumah agar ketika orang datang, kita dapat diberi tahu.
+    Dengan adanya bel rumah kita tidak perlu sibuk mengecek pintu rumah, tetapi kita bisa melakukan pekerjaan lain, misalnya memasak.
+
+    Sama seperti analogi tersebut, jika kita menggunakan interrupt untuk membaca penekanan push button, maka CPU dapat digunakan untuk melakukan eksekusi tugas lain. Table [tab:polling_interrupt] merangkum perbandingan polling dan interrupt.
+
+    Polling                                               | Interrupt
+    ------------------------------------------------------|------------------
+    CPU melakukan sampling terhadap status peripheral.    | Sebuah sinyal yang dikirim peripheral untuk menginterupsi CPU
+    Eksekusi program dilakukan di fungsi utama/loop().    | Eksekusi program dilakukan di fungsi interrupt service routine (ISR).
+    Terjadi secara periodik.                              | Bisa terjadi kapan saja.
+    Memboroskan CPU cycles.                               | Tidak memboroskan CPU cycles.     
+    Tidak efisien jika event-nya jarang terjadi.          | Tidak efisien jika event-nya sangat sering terjadi.
+    [Table [tab:polling_interrupt]: Perbandingan polling dan interrupt]
+
+    Library Interrupt
+    ===========================
+    Pada bagian ini, kita akan belajar mengenai fungsi pada library Arduino yang diperlukan untuk menggunakan interrupt.
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C linenumbers
+    void attachInterrupt(uint8_t pin, std::function<void(void)> intRoutine, int mode);
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [lst:attachinterrupt]: Fungsi `attachInterrupt` untuk menghubungkan pin GPIO input dengan interrupt]
+
+    Fungsi `attachInterrupt` berfungsi untuk menghubungkan pin GPIO input dengan interrupt.
+    Fungsi ini memiliki tiga argumen input yaitu pin GPIO, nama fungsi ISR, dan mode interrupt:
+    * **pin** merupakan nomor pin GPIO yang akan dihubungkan dengan interrupt. Disarankan menggunakan fungsi `digitalPinToInterrupt` untuk memasukkan argumen ini.
+    * **intRoutine** merupakan nama fungsi ISR yang kita definisikan.
+    * **mode** merupakan mode trigger interrupt yang akan digunakan. Terdapat lima mode trigger interrupt pada ESP32:
+      * **LOW**: trigger interrupt ketika pin bernilai LOW
+      * **HIGH**: trigger interrupt ketika pin bernilai HIGH
+      * **CHANGE**: trigger interrupt ketika pin berubah nilai dari HIGH menjadi LOW atau LOW menjadi HIGH.
+      * **FALLING**: trigger interrupt ketika pin berubah nilai dari HIGH menjadi LOW.
+      * **RISING**: trigger interrupt ketika pin berubah dari LOW menjadi HIGH.
+
+    Contoh Program
+    ===========================
+    Pada contoh program ini, kita akan mempelajari perbedaan polling dan interrupt dengan aplikasi sederhana yaitu membaca penekanan push button.
+
+    Untuk dapat menjalankan contoh program ini diperlukan beberapa komponen:
+    * Development board ESP32
+    * Push button
+    * 2 buah LED
+    * 2 buah resistor 100Ω
+    * Breadboard
+    * Kabel jumper
+
+    Di sini kita akan menggunakan dua buah LED (merah dan hijau).
+    LED merah akan berkedip setiap 2 detik, dan LED hijau akan menyala jika push button ditekan.
+
+    Ilustrasi koneksi dari komponen-komponen ke ESP32 ditampilkan pada Figure [fig:button-bb].
+    Pin yang digunakan untuk menghubungkan komponen-komponen ke ESP32 ditampilkan pada Table [tab:wiring].
+    LED dan push button tersebut menggunakan rangkaian active-low.
+
+    ![Figure [fig:button-bb]: Rangkaian breadboard untuk program polling dan interrupt](button-bb.jpg width=400px)
+
+
+    Sensor/Aktuator Pin     | ESP32 Pin
+    ------------------------|------------------
+    Push button             | D12
+    LED merah               | D25
+    LED hijau               | D26
+    [Table [tab:wiring]: Koneksi ESP32]
+
+    Listing [lst:kode_polling] menampilkan contoh program pembacaan push button dengan metode polling.
+    Berikut ini penjelasan cara kerja program tersebut:
+    * Pada **line 2-5**, kita mendefinisikan pin untuk LED dan push button.
+    * Pada **line 10-18**, kita mengkonfigurasi pin untuk LED dan push button.
+    * Pada **line 24-27** berisi kode program untuk LED merah yang berkedip setiap 2 detik.
+    * Pada **line 29-38** berisi kode program untuk pembacaan push button dan LED hijau.
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C linenumbers
+    // LED pin
+    #define RED_LED_PIN     25
+    #define GREEN_LED_PIN   26
+    // Button pin
+    #define BTNPIN          12
+    
+    void setup()
+    {
+      // Konfigurasi GPIO pin sebagai output untuk LED
+      pinMode(RED_LED_PIN, OUTPUT);
+      pinMode(GREEN_LED_PIN, OUTPUT);
+      
+      // Set nilai LED ke kondisi off
+      digitalWrite(RED_LED_PIN, HIGH);
+      digitalWrite(GREEN_LED_PIN, HIGH);
+      
+      // Konfigurasi GPIO pin sebagai input pull-up untuk button
+      pinMode(BTNPIN, INPUT_PULLUP);
+    }
+    
+    void loop()
+    {
+      // Red LED berkedip setiap 2 detik
+      digitalWrite(RED_LED_PIN, LOW);
+      delay(2000);
+      digitalWrite(RED_LED_PIN, HIGH);
+      delay(2000);
+    
+      if (digitalRead(BTNPIN) == LOW) // Jika button ditekan
+      {
+        // Nyalakan LED
+        digitalWrite(GREEN_LED_PIN, LOW);
+      }
+      else
+      {
+        // Matikan LED
+        digitalWrite(GREEN_LED_PIN, HIGH);
+      }
+    }    
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [lst:kode_polling]: Contoh program pembacaan push button dengan metode polling]
+
+    Figure [fig:button-polling] menampilkan hasil pembacaan push button dengan metode polling.
+    Dapat kita lihat bahwa LED merah berkedip setiap 2 detik.
+    Ketika push button ditekan, LED hijau tidak selalu menyala atau kurang responsif.
+    Hal ini terjadi karena pembacaan GPIO dilakukan pada fungsi loop yang juga berisi kode untuk LED merah berkedip.
+    Pada kasus terburuk, agar penekanan push button terbaca, maka penekanan harus dilakukan selama 4 detik.
+    Delay 4 detik ini berasal dari kode LED merah.
+
+    ![Figure [fig:button-polling]: Hasil pembacaan push button dengan metode polling](button-polling.gif width=640px)
+
+    Listing [lst:kode_interrupt] menampilkan contoh program pembacaan push button dengan metode interrupt.
+    Berikut ini penjelasan cara kerja program tersebut:
+    * Pada **line 2-5**, kita mendefinisikan pin untuk LED dan push button.
+    * Pada **line 7-19**, kita mendefinisikan fungsi ISR untuk push button dan LED hijau. Fungsi ini yang akan di-input-kan pada fungsi `attachInterrupt`. 
+    * Pada **line 24-32**, kita mengkonfigurasi pin untuk LED dan push button.
+    * Pada **line 35**, kita memanggil fungsi `attachInterrupt` untuk menghubungkan pin GPIO dengan interrupt. Mode yang kita gunakan yaitu mode `CHANGE`.
+    * Pada **line 40-44** berisi kode program untuk LED merah yang berkedip setiap 2 detik.
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C linenumbers
+    // LED pin
+    #define RED_LED_PIN     25
+    #define GREEN_LED_PIN   26
+    // Button pin
+    #define BTNPIN          12
+    
+    void IRAM_ATTR button_isr()
+    { 
+      if (digitalRead(BTNPIN) == LOW) // Jika button ditekan
+      {
+        // Nyalakan LED
+        digitalWrite(GREEN_LED_PIN, LOW);
+      }
+      else
+      {
+        // Matikan LED
+        digitalWrite(GREEN_LED_PIN, HIGH);
+      }
+    }
+    
+    void setup()
+    {
+      // Konfigurasi GPIO pin sebagai output untuk LED
+      pinMode(RED_LED_PIN, OUTPUT);
+      pinMode(GREEN_LED_PIN, OUTPUT);
+      
+      // Set nilai LED ke kondisi off
+      digitalWrite(RED_LED_PIN, HIGH);
+      digitalWrite(GREEN_LED_PIN, HIGH);
+      
+      // Konfigurasi GPIO pin sebagai input pull-up untuk button
+      pinMode(BTNPIN, INPUT_PULLUP);
+    
+      // Hubungkan interrupt handler (ISR) dengan button
+      attachInterrupt(digitalPinToInterrupt(BTNPIN), button_isr, CHANGE);
+    }
+    
+    void loop()
+    {
+      // Red LED berkedip setiap 2 detik
+      digitalWrite(RED_LED_PIN, LOW);
+      delay(2000);
+      digitalWrite(RED_LED_PIN, HIGH);
+      delay(2000);
+    }
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [lst:kode_interrupt]: Contoh program pembacaan push button dengan metode interrupt]
+
+    Figure [fig:button-interrupt] menampilkan hasil pembacaan push button dengan metode interrupt.
+    Pada metode interrupt, dapat kita lihat bahwa setiap penekanan push button, LED hijau selalu menyala atau lebih responsif.
+    Hal ini terjadi karena pembacaan GPIO dilakukan pada fungsi ISR, sehingga tidak terganggu oleh kode LED merah berkedip.
+    Ketika push button ditekan, maka CPU akan menghentikan sementara eksekusi kode LED merah, dan melakukan pembacaan push button.
+
+    ![Figure [fig:button-interrupt]: Hasil pembacaan push button dengan metode interrupt](button-interrupt.gif width=640px)
+
+    Repository Kode Program
+    ===========================
+    Kode program untuk polling dan interrupt dapat didapatkan di repository ini: [button-polling](https://github.com/klinikarduino/esp32/tree/main/button-polling) dan [button-interrupt](https://github.com/klinikarduino/esp32/tree/main/button-interrupt).
+
+    <link href='https://fonts.googleapis.com/css?family=Roboto:400,300,100,100italic,300italic,400italic,700' rel='stylesheet' type='text/css'>
+    <script>window.markdeepOptions = {'tocStyle':'long'};</script>
+    <script src="../../markdeep.min.js"></script>
+    <script>window.alreadyProcessedMarkdeep||(document.body.style.visibility="visible")</script>
+</body>

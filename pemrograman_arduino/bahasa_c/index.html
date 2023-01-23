@@ -1,0 +1,348 @@
+<head>
+    <meta charset="utf-8" lang="en">
+    <link rel="icon" href="../../logo.png">
+    <style class="fallback">
+    body {
+        visibility: hidden;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    </style>
+</head> 
+<body>
+    **Bab 3 Pengenalan Bahasa C**
+    **Instagram: [@klinikarduino](https://www.instagram.com/klinikarduino/)**
+    **Facebook: [@klinikarduino](https://web.facebook.com/klinikarduino)**
+    **by [Erwin Setiawan](https://yohanes-erwin.github.io/)**
+
+    <center>**[Pemrograman Arduino](../index.html)**</center>
+
+    Pengenalan Board
+    ===========================
+    Pada bagian ini, kita akan belajar mengenai board yang akan kita gunakan yaitu DOIT ESP32 DevKit v1 seperti pada Figure [fig:doitesp32].
+    Kita akan menggunakan board berbasis ESP32 karena board ini memiliki peripheral yang cukup lengkap, sudah tersedia Wi-Fi dan Bluetooth,
+    serta harganya yang cukup terjangkau.
+
+    ![Figure [fig:doitesp32]: DOIT ESP32 DevKit v1](doitesp32.jpg width=300px)
+
+    Berikut ini merupakan spesifikasi ESP32 yang akan kita gunakan:
+    * **Jumlah CPU core**: 2
+    * **Arsitektur CPU**: 32-bit
+    * **Clock frequency**: up to 240 MHz
+    * **SRAM**: 320 KB
+    * **Flash memory**: 4 MB
+    * **Wireless connectivity**: Wi-Fi 802.11 b/g/n, Bluetooth 4.2
+    * **Peripheral**: GPIO, Timer, PWM, UART, SPI, I2C, ADC, DAC, dll.
+    * **Pins**: 30 atau 36 tergantung versi board
+    * **I/O voltage**: 3.3 V
+
+    Figure [fig:doitesp32devkit_pinout] menampilkan pin pada board DOIT ESP32 DevKit v1 (versi 30 pins).
+    Pin-pin pada board ini memiliki tegangan kerja 3.3 V.
+    Pin-pin tersebut dapat dikonfigurasi sebagai output, input, atau fungsi dari peripheral seperti UART, I2C, SPI, ADC, dll.
+    Konfigurasi tersebut dilakukan di kode yang kita buat. 
+
+    ![Figure [fig:doitesp32devkit_pinout]: Pin pada board DOIT ESP32 DevKit v1 (versi 30 pins). Sumber: [Random Nerd Tutorials](https://randomnerdtutorials.com/getting-started-with-esp32/)](doitesp32devkit_pinout.png width=700px)
+
+    Struktur Program
+    ===========================
+    Pada bagian ini, kita akan mempelajari struktur program Arduino.
+    Dalam pemrograman Arduino, file kode C yang buat disebut juga "sketch".
+    Dalam pemrograman dasar C, kita mengenal fungsi `main()` sebagai fungsi utama yang dipanggil, tetapi pada sketch Arduino terdiri dari dua fungsi utama yaitu `setup()` dan `loop()` seperti pada Listing [lst:setup_loop].
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C linenumbers
+    void setup()
+    {
+        
+    }
+
+    void loop()
+    {
+
+    }
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [lst:setup_loop]: Dua fungsi utama dalam sketch Arduino]
+
+    Fungsi `setup()` dipanggil hanya satu kali ketika board dinyalakan atau di-reset.
+    Fungsi ini digunakan untuk inisialisasi variable, pin, library, dll.
+    Fungsi `loop()`, sesuai dengan namanya, fungsi ini akan dijalankan terus menerus sampai board dimatikan atau di-reset.
+    Fungsi ini digunakan untuk membuat fungsionalitas dari program yang kita inginkan.
+
+    Tipe Data
+    ===========================
+    Tipe data digunakan untuk deklarasi variable yang akan berisi data kita.
+    Tipe data akan menentukan berapa banyak memori yang diperlukan dan bagaimana bit-bit yang tersimpan dalam memori tersebut akan diinterpretasikan.
+
+    Berikut ini merupakan tipe data yang biasa digunakan pada Arduino:
+    * **boolean** (8 bit): logika true atau false.
+    * **byte** (8 bit): unsigned number dari 0 sampai 255.
+    * **char** (8 bit): signed number dari -128 sampai 127. Biasanya digunakan untuk menyimpan karakter ASCII.
+    * **unsigned char** (8 bit): sama seperti tipe data 'byte'.
+    * **word** (16 bit): unsigned number dari 0 sampai 65535
+    * **unsigned int** (16 bit): sama seperti tipe data 'word'.
+    * **int** (16 bit): signed number dari -32768 sampai 32767. Merupakan tipe data yang paling sering digunakan pada sketch Arduino.
+    * **unsigned long** (32 bit): unsigned number dari 0 sampai 4.294.967.295. Biasanya digunakan untuk menyimpan nilai waktu dalam milliseconds dari fungsi millis().
+    * **long** (32 bit): signed number dari -2.147.483.648 sampai 2.147.483.647.
+    * **float** (32 bit): signed number dari -3.4028235x10^38 sampai 3.4028235x10^38.
+    Tipe signed dapat menyimpan angka positif dan negatif, tetapi tipe unsigned hanya bisa menyimpan angka positif.
+
+    Variable
+    ===========================
+    Variable merupakan nama yang diberikan ke lokasi memori tempat menyimpan data kita.
+    Variable kita buat dengan menentukan tipe datanya terlebih dahulu.
+    Nama variable dapat terdiri dari huruf, angka, dan karakter underscore.
+    Nama variable harus dimulai dari huruf atau underscore, tidak bisa dimulai dengan angka.
+    Dalam bahasa C, huruf besar (kapital) dan huruf kecil itu dianggap berbeda (case sensitive).
+
+    Salah satu hal yang perlu dipahami saat membuat variable yaitu variable scope.
+    Ada dua jenis variable scope yaitu local variable dan global variable.
+    Local variable merupakan variable yang dideklarasikan di dalam sebuah fungsi.
+    Variable tersebut hanya bisa digunakan di dalam fungsi tersebut.
+    Contoh deklarasi local variable dapat dilihat pada Listing [lst:local_var].
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C linenumbers
+    void setup()
+    {
+        
+    }
+
+    void loop()
+    {
+        int x = 1; // local variable
+    }
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [lst:local_var]: Contoh deklarasi local variable di dalam sebuah fungsi]
+
+    Global variable merupakan variable yang dideklarasikan di luar semua fungsi, biasanya di bagian atas program.
+    Global variable dapat diakses dari semua fungsi.
+    Contoh deklarasi global variable dapat dilihat pada Listing [lst:global_var].
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C linenumbers
+    float f = 0.25; // global variable
+
+    void setup()
+    {
+        
+    }
+
+    void loop()
+    {
+        int i = 1; // local variable
+    }
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [lst:global_var]: Contoh deklarasi global variable di bagian atas program]
+
+    Operator
+    ===========================
+    Operator merupakan simbol yang berfungsi untuk melakukan operasi matematika atau logika.
+    Bahasa C memiliki banyak operator yang dapat dikelompokkan menjadi beberapa bagian:
+    * Arithmetic operator
+    * Comparison operator
+    * Boolean operator
+    * Bitwise operator
+    * Compound operator
+
+    Arithmetic operator
+    ---------------------------
+    Arithmetic operator banyak digunakan untuk membuat perhitungan matematika.
+    Asumsikan kita memiliki dua variable, a bernilai 1 dan b bernilai 2, maka:
+
+    Operator    | Nama               | Penjelasan                                                                       | Contoh
+    ------------|--------------------|----------------------------------------------------------------------------------|------------------
+    **=**       | assignment         | Menyimpan nilai variable sebelah kanan tanda = ke variable sebelah kiri tanda =. | a=b, maka a akan bernilai 2
+    **+**       | penjumlahan        | Menjumlahkan dua buah variable.                                                  | a+b, maka akan memberikan hasil 3
+    **-**       | pengurangan        | Mengurangkan variable pertama dengan variable kedua.                             | a-b, maka akan memberikan hasil -1
+    __*__       | perkalian          | Mengalikan dua buah variable.                                                    | a*b, maka akan memberikan hasil 2
+    **/**       | pembagian          | Membagi variable pertama dengan variable kedua.                                  | a/b, maka akan memberikan hasil 0.5
+    **%**       | modulo             | Mencari sisa pembagian variable pertama dengan variable kedua.                   | a%b, maka akan memberikan hasil 1
+    [Table [tab:arith_operator]: Arithmetic operator]
+
+    Comparison operator
+    ---------------------------
+    Comparison operator banyak digunakan untuk membuat kondisi pada if atau loop statement.
+    Asumsikan kita memiliki dua variable, a bernilai 1 dan b bernilai 2, maka:
+
+    Operator    | Nama                         | Penjelasan                                                                                                                         | Contoh
+    ------------|------------------------------|------------------------------------------------------------------------------------------------------------------------------------|------------------
+    **==**      | sama dengan                  | Mengecek apakah dua buah variable bernilai sama. Jika sama maka akan memberikan hasil true.                                        | a`==`b, maka akan memberikan hasil false
+    **!=**      | tidak sama dengan            | Mengecek apakah dua buah variable bernilai beda. Jika beda maka akan memberikan hasil true.                                        | a`!=`b, maka akan memberikan hasil true
+    **<**       | kurang dari                  | Mengecek apakah variable sebelah kiri kurang dari variable sebelah kanan. Jika ya maka akan memberikan hasil true.                 | a`<`b, maka akan memberikan hasil true
+    **>**       | lebih dari                   | Mengecek apakah variable sebelah kiri lebih dari variable sebelah kanan. Jika ya maka akan memberikan hasil true.                  | a`>`b, maka akan memberikan hasil false
+    **<=**      | kurang dari atau sama dengan | Mengecek apakah variable sebelah kiri kurang dari atau sama dengan variable sebelah kanan. Jika ya maka akan memberikan hasil true.| a`<=`b, maka akan memberikan hasil true
+    **>=**      | lebih dari atau sama dengan  | Mengecek apakah variable sebelah kiri lebih dari atau sama dengan variable sebelah kanan. Jika ya maka akan memberikan hasil true. | a`>=`b, maka akan memberikan hasil false
+    [Table [tab:comp_operator]: Comparison operator]
+
+    Boolean operator
+    ---------------------------
+    Boolean operator banyak digunakan untuk membuat kondisi pada if atau loop statement.
+    Asumsikan kita memiliki dua variable, a bernilai 1 dan b bernilai 2, maka:
+
+    Operator    | Nama   | Penjelasan                                                                                | Contoh
+    ------------|--------|-------------------------------------------------------------------------------------------|------------------
+    **&&**      | and    | Jika kedua variable bernilai bukan nol, maka akan memberikan hasil true.                  | a&&b, maka akan memberikan hasil true
+    **`||`**    | or     | Jika salah satu dari kedua variable bernilai bukan nol, maka akan memberikan hasil true.  | a`||`b, maka akan memberikan hasil true
+    **!**       | not    | Untuk membalik nilai logika. Logika true menjadi false, dan sebaliknya.                   | !(a&&b), maka akan memberikan hasil false
+    [Table [tab:bool_operator]: Boolean operator]
+
+    Bitwise operator
+    ---------------------------
+    Bitwise operator banyak digunakan untuk memanipulasi bit-bit dalam sebuah variable.
+    Asumsikan kita memiliki dua variable, a bernilai 6 dan b bernilai 12 serta jumlah bit pada kedua variable tersebut adalah 8-bit, maka:
+
+    Operator    | Nama        | Penjelasan                             | Contoh
+    ------------|-------------|----------------------------------------|------------------
+    **&**       | bitwise and | Operasi bit and antara kedua variable. | a&b, maka akan memberikan hasil 12 atau 00001100 dalam binary
+    **`|`**     | bitwise or  | Operasi bit or antara kedua variable.  | a`|`b, maka akan memberikan hasil 14 atau 00001110 dalam binary
+    **^**       | bitwise xor | Operasi bit xor antara kedua variable. | a^b, maka akan memberikan hasil 10 atau 00001010 dalam binary
+    **~**       | bitwise not | Operasi bit not dari suatu variable.   | ~a, maka akan memberikan hasil -7 atau 11111001 dalam binary
+    **<<**      | shift left  | Menggeser bit-bit ke sebelah kiri.     | a`<<2`, maka akan memberikan hasil 24 atau 00011000 dalam binary
+    **>>**      | shift right | Menggeser bit-bit ke sebelah kanan.    | a`>>2`, maka akan memberikan hasil 1 atau 00000001 dalam binary
+    [Table [tab:bit_operator]: Bitwise operator]
+
+    Compound operator
+    ---------------------------
+    Compound operator merupakan operator yang biasa digunakan untuk mempersingkat penulisan kode agar lebih ringkas.
+    Asumsikan kita memiliki dua variable, a bernilai 1 dan b bernilai 2, maka:
+
+    Operator    | Nama                    | Penjelasan                                                                                                            | Contoh
+    ------------|-------------------------|-----------------------------------------------------------------------------------------------------------------------|------------------
+    **++**      | increment               | Menambahkan nilai integer 1 ke suatu variable.                                                                        | a++ akan memberikan hasil 2. Equivalen dengan a=a+1
+    **`--`**    | decrement               | Mengurangkan nilai integer 1 dari suatu variable.                                                                     | b`--` akan memberikan hasil 1. Equivalen dengan b=b+1
+    **+=**      | compound addition       | Menjumlahkan dua buah variable, kemudian hasilnya disimpan pada variable sebelah kiri.                                | a+=b equivalen dengan a=a+b
+    **-=**      | compound subtraction    | Mengurangkan variable pertama dengan variable kedua, kemudian hasilnya disimpan pada variable sebelah kiri.           | a-=b equivalen dengan a=a-b
+    __*=__      | compound multiplication | Mengalikan dua buah variable, kemudian hasilnya disimpan pada variable sebelah kiri.                                  | a*=b equivalen dengan a=a*b
+    **/=**      | compound division       | Membagi variable pertama dengan variable kedua, kemudian hasilnya disimpan pada variable sebelah kiri.                | a/=b equivalen dengan a=a/b
+    **%=**      | compound modulo         | Mencari sisa pembagian variable pertama dengan variable kedua, kemudian hasilnya disimpan pada variable sebelah kiri. | a%=b equivalen dengan a=a%b
+    **&=**      | compound bitwise and    | Melakukan operasi bitwise and, kemudian hasilnya disimpan pada variable sebelah kiri.                                 | a&=b equivalen dengan a=a&b
+    **`|`=**    | compound bitwise or     | Melakukan operasi bitwise or, kemudian hasilnya disimpan pada variable sebelah kiri.                                  | a`|`=b equivalen dengan a=a`|`b
+    **^=**      | compound bitwise xor    | Melakukan operasi bitwise xor, kemudian hasilnya disimpan pada variable sebelah kiri.                                 | a^=b equivalen dengan a=a^b
+    [Table [tab:com_operator]: Compound operator]
+
+    If Statement
+    ===========================
+    Statement if digunakan untuk membuat keputusan berdasarkan beberapa kondisi yang mungkin terjadi.
+    Jika salah satu kondisi tersebut terjadi, maka kode untuk kondisi tersebut akan dijalankan.
+
+    if
+    ---------------------------
+    Statement if paling sederhana ditunjukan pada Listing [lst:if_1].
+    Jika `expression` bernilai true, maka kode di dalam blok tersebut akan dijalankan.
+    Jika `expression` bernilai false, maka kode di dalam blok tersebut tidak akan dijalankan.
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C linenumbers
+    if (expression)
+    {
+        // Kode dijalankan jika expression bernilai true
+    }
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [lst:if_1]: if statement]
+
+    if...else
+    ---------------------------
+    Statement if...else ditunjukan pada Listing [lst:if_2].
+    Jika `expression` bernilai true, maka kode di dalam blok if akan dijalankan.
+    Sebaliknya, jika `expression` bernilai false, maka kode di dalam blok else yang akan dijalankan.
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C linenumbers
+    if (expression)
+    {
+        // Kode dijalankan jika expression bernilai true
+    }
+    else
+    {
+        // Kode dijalankan jika expression bernilai false
+    }
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [lst:if_2]: if...else statement]
+
+    if...else if...else
+    ---------------------------
+    Statement if...else if...else ditunjukan pada Listing [lst:if_3].
+    Terdapat blok untuk kondisi else if. Blok else if ini bisa terdapat lebih dari satu.
+
+    * Jika `expression_1` bernilai true, maka kode untuk blok `expression_1` tersebut akan dijalankan.
+    * Jika `expression_2` bernilai true, maka kode untuk blok `expression_2` tersebut akan dijalankan.
+    * Jika `expression_1` dan `expression_2` bernilai false, maka kode untuk blok else yang akan dijalankan.
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C linenumbers
+    if (expression_1)
+    {
+        // Kode dijalankan jika expression_1 bernilai true
+    }
+    else if (expression_2)
+    {
+        // Kode dijalankan jika expression_2 bernilai true
+    }
+    else
+    {
+        // Kode dijalankan jika semua expression bernilai false
+    }
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [lst:if_3]: if...else if...else statement]
+
+    Loop Statement
+    ===========================
+    Loop statement berfungsi untuk melakukan perulangan dalam menjalankan suatu blok kode.
+    Perulangan tersebut dijalankan selama kondisi bernilai true.
+    Jika kondisi sudah bernilai false, maka perulangan akan dihentikan.
+
+    while
+    ---------------------------
+    While statement akan menjalankan kode di dalam blok tersebut terus-menerus sampai kondisi expression bernailai false.
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C linenumbers
+    while (expression)
+    {
+        // Kode terus dijalankan selama expression bernilai true
+    }
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [lst:loop_1]: while statement]
+
+    do...while
+    ---------------------------
+    Do...while statement mirip seperti while statement, tetapi pengecekan kondisi expression dilakukan di akhir setelah mejalankan kode blok satu kali.
+    Sedangkan pada while statement pengecekan kondisi expression dilakukan di awal sebelum mejalankan kode blok.
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C linenumbers
+    do
+    {
+        // Kode terus dijalankan selama expression bernilai true
+    }
+    while (expression)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [lst:loop_2]: do...while statement]
+
+    for
+    ---------------------------
+    For statement akan menjalankan kode blok sebanyak jumlah yang telah ditentukan.
+    For statement berbeda dengan while dan do...while statement, karena jumlah perulangannya telah diketahui dari awal.
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C linenumbers
+    for (initialize; control; increment or decrement)
+    {
+        // Kode dijalankan sebanyak jumlah yang ditentukan pada control.
+    }
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [lst:loop_3]: for statement]
+
+    Function
+    ===========================
+    Function merupakan kode program yang dirancang untuk menyelesaikan suatu tugas tertentu.
+    Function akan sangat berguna jika tugas tersebut perlu dilakukan berberapa kali di bagian kode yang berbeda,
+    sehingga kita tidak perlu menuliskan kode tersebut berberapa kali.
+    Kita hanya perlu menuliskan function tersebut satu kali, kemudian kita bisa panggil function tersebut berberapa kali di bagian kode yang berbeda.
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C linenumbers
+    return_type function_name(argument_1, argument_2, ...)
+    {
+        // Kode program untuk menjalankan suatu tugas
+    }
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [lst:function]: Struktur function]
+
+
+    Listing [lst:function] merupakan struktur dasar function pada pemrograman C yang terdiri dari:
+
+    * **function_name**: merupakan nama yang kita berikan untuk mengidentifikasi function tersebut.
+    * **argument_1, argument_2, ...**: merupakan input dari function tersebut.
+    * **return_type**: merupakan tipe data dari output function tersebut.
+
+    Di dalam kode blok tersebut berisi kode untuk melakukan suatu tugas.
+    Misalkan fungsi untuk menghitung luas persegi panjang, maka input-nya adalah panjang dan lebar, sedangkan output-nya adalah luas.
+
+    <link href='https://fonts.googleapis.com/css?family=Roboto:400,300,100,100italic,300italic,400italic,700' rel='stylesheet' type='text/css'>
+    <script>window.markdeepOptions = {'tocStyle':'long'};</script>
+    <script src="../../markdeep.min.js"></script>
+    <script>window.alreadyProcessedMarkdeep||(document.body.style.visibility="visible")</script>
+</body>

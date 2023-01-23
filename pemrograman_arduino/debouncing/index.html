@@ -1,0 +1,221 @@
+<head>
+    <meta charset="utf-8" lang="en">
+    <link rel="icon" href="../../logo.png">
+    <style class="fallback">
+    body {
+        visibility: hidden;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    </style>
+</head> 
+<body>
+    **Pembacaan Push Button dengan Button Debouncing**
+    **Instagram: [@klinikarduino](https://www.instagram.com/klinikarduino/)**
+    **Facebook: [@klinikarduino](https://web.facebook.com/klinikarduino)**
+    **by [Erwin Setiawan](https://yohanes-erwin.github.io/)**
+    
+    <center>**[Pemrograman Arduino](../index.html)**</center>
+
+    Apa itu Button Debouncing?
+    ===========================
+    Ketika kita menggunakan komponen push button atau switch mechanical, maka akan ada fenomena yang bernama button bounce.
+    Button bounce terjadi pada kontak fisik dari push button atau switch tersebut.
+    Hal ini terjadi karena kontak fisik dari push button atau switch terbuat dari metal sehingga memiliki elastisitas.
+    
+    Button bounce menyebabkan noise pada sinyal input untuk GPIO seperti pada gambar Figure [fig:button_bouncing].
+    Fenomena ini bisa terjadi selama beberapa micro sampai mili detik sampai nilai button tersebut stabil.
+    Noise ini dapat menyebabkan kesalahan pembacaan oleh GPIO terutama pada aplikasi pembacaan jumlah penekanan button.
+    Satu kali penekanan button oleh user, dapat terbaca berkali-kali oleh mikrokontroler.
+
+    ![Figure [fig:button_bouncing]: Fenomena button bouncing](button_bouncing.jpg width=700px)
+
+    Solusi untuk masalah ini disebut button debouncing.
+    Ada banyak metode debouncing yang bisa digunakan, mulai dari debouncing dengan hardware sampai debouncing dengan software.
+    Pada tutorial ini akan dibahas mengenai debouncing dengan software.
+
+    Metode debouncing dengan software dilakukan dengan menggunakan timer untuk menunggu sampai nilai GPIO stabil, kemudian nilai tersebut yang akan dibaca.
+    Proses debouncing ini digambarkan pada Figure [fig:debouncing].
+
+    ![Figure [fig:debouncing]: Metode debouncing untuk pembacaan button dengan timer](debouncing.jpg width=700px)
+
+    Contoh Program
+    ===========================
+    Pada contoh program ini, kita akan mempelajari dua kasus pembacaan push button.
+    Pembacaan pada program pertama dilakukan tanpa debouncing.
+    Pembacaan pada program kedua dilakukan dengan debouncing.
+
+    Untuk dapat menjalankan contoh program ini diperlukan beberapa komponen:
+    * Development board ESP32
+    * 1 buah push button
+    * 1 buah LED
+    * 1 buah resistor 100Ω
+    * Breadboard
+    * Kabel jumper
+
+    Ilustrasi koneksi dari komponen-komponen ke ESP32 ditampilkan pada Figure [fig:button-debouncing-bb].
+    Pin yang digunakan untuk menghubungkan komponen-komponen ke ESP32 ditampilkan pada Table [tab:wiring].
+    Push button dan LED tersebut menggunakan rangkaian active-low.
+
+    ![Figure [fig:button-debouncing-bb]: Rangkaian breadboard untuk program button debouncing](button-debouncing-bb.jpg width=400px)
+
+
+    Sensor/Aktuator Pin     | ESP32 Pin
+    ------------------------|------------------
+    Push button             | D12
+    LED merah               | D25
+    [Table [tab:wiring]: Koneksi ESP32]
+
+    Program Button Tanpa Debouncing
+    ===========================
+    Pada contoh progam ini, kita akan melakukan pembacaan push button tanpa debouncing.
+    Tujuan dari program ini yaitu setiap satu kali penekanan button, maka LED akan di-invert (nyala jadi mati dan mati jadi nyala).
+
+    Listing [lst:no_debouncing] menampilkan contoh program push button tanpa debouncing.
+    Berikut ini penjelasan cara kerja program tersebut:
+    * Pada **line 2-4**, kita mendefinisikan pin untuk LED dan push button.
+    * Pada **line 6-7**, kita membuat variable untuk menyimpan state dari push button dan LED.
+    * Pada **line 12-18**, kita melakukan inisialisasi GPIO untuk LED dan push button.
+    * Pada **line 24**, kita melakukan pembacaan push button kemudian disimpan pada variable `btn_state`.
+    * Pada **line 27-30**, kita melakukan pengecekan apakah nilai `btn_state` adalah LOW. Jika iya, maka kita akan meng-invert nilai LED.
+    * Pada **line 33**, kita menulis nilai LED dari variable `led_state` ke GPIO LED.
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C linenumbers
+    // LED pin
+    #define RED_LED_PIN     25
+    // Button pin
+    #define BTNPIN          12
+
+    int btn_state;
+    int led_state = HIGH;
+
+    void setup()
+    {
+      // Konfigurasi GPIO pin sebagai output untuk LED
+      pinMode(RED_LED_PIN, OUTPUT);
+    
+      // Set nilai LED ke kondisi off
+      digitalWrite(RED_LED_PIN, HIGH);
+    
+      // Konfigurasi GPIO pin sebagai input pull-up untuk button
+      pinMode(BTNPIN, INPUT_PULLUP);
+    }
+
+    void loop()
+    {
+      // Read button
+      btn_state = digitalRead(BTNPIN);
+
+      // Toggle LED state
+      if (btn_state == LOW)
+      {
+        led_state = !led_state;
+      }
+    
+      // Write LED state
+      digitalWrite(RED_LED_PIN, led_state);
+    }
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [lst:no_debouncing]: Contoh program pembacaan button tanpa debouncing]
+
+    Figure [fig:button-without-debouncing] menampilkan hasil pembacaan button tanpa debouncing.
+    Dapat kita lihat bahwa setiap penekanan button, LED tidak selalu ter-invert.
+    Ada kondisi dimana untuk meng-invert perlu dilakukan penekanan button sebanyak dua kali,
+    padahal yang kita inginkan yaitu hanya satu kali.
+    Hal tersebut bisa terjadi karena noise bouncing yang menyebabkan penekanan terbaca beberapa kali.
+
+    ![Figure [fig:button-without-debouncing]: Pembacaan button tanpa debouncing](button-without-debouncing.gif width=640px)
+
+    Program Button Dengan Debouncing
+    ===========================
+    Pada contoh progam ini, kita akan melakukan pembacaan push button dengan debouncing.
+    Progam ini akan mengatasi masalah button bouncing yang terjadi pada program sebelumnya.
+
+    Listing [lst:debouncing] menampilkan contoh program push button dengan debouncing.
+    Berikut ini penjelasan cara kerja program tersebut:
+    * Pada **line 2-4**, kita mendefinisikan pin untuk LED dan push button.
+    * Pada **line 6-8**, kita membuat variable untuk menyimpan state dari push button dan LED.
+    * Pada **line 10-11**, kita membuat variable untuk menyimpan nilai millis timer debouncing dan nilai delay debouncing.
+    * Pada **line 16-22**, kita melakukan inisialisasi GPIO untuk LED dan push button.
+    * Pada **line 28**, kita melakukan pembacaan push button kemudian disimpan pada variable lokal bernama `reading`. Nilai variable ini menyimpan pembacaan button secara real-time dan tanpa debouncing.
+    * Pada **line 31-35**, kita melakukan perbandingan antara nilai button yang terbaca saat ini (`reading`) dan nilai button yang terbaca pada iterasi loop sebelumnya (`last_button_state`). Jika nilainya berbeda, maka ini berarti nilai GPIO masih berubah-ubah atau belum stabil (masih berada dalam tahap noise bounce). Jika masih dalam tahap bounce, maka timer akan selalu di-reset (di-update dengan nilai millis terbaru).
+    * Pada **line 38-51**, kondisi `if` tersebut akan terpenuhi ketika noise bounce sudah terlewati dan timer debouncing sudah memenuhi waktu yang ditetapkan di variable `debounce_delay`. Jika kondisi ini terpenuhi, maka ini dianggap terjadi penekanan button yang valid. Selanjutnya kita melakukan update state button pada variable `button_state`, kemudian jika state bernilai LOW, maka akan dilakukan invert terhadap state LED.
+    * Pada **line 54**, kita menulis nilai LED dari variable `led_state` ke GPIO LED.
+    * Pada **line 57**, kita menyimpan nilai pembacaan button saat ini untuk iterasi loop berikutnya.
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C linenumbers
+    // LED pin
+    #define RED_LED_PIN     25
+    // Button pin
+    #define BTNPIN          12
+    
+    int led_state = LOW;
+    int button_state = HIGH;
+    int last_button_state = HIGH;
+    
+    unsigned long last_debounce_time = 0;
+    unsigned long debounce_delay = 50;
+    
+    void setup()
+    {
+      // Konfigurasi GPIO pin sebagai output untuk LED
+      pinMode(RED_LED_PIN, OUTPUT);
+      
+      // Set nilai LED ke kondisi off
+      digitalWrite(RED_LED_PIN, HIGH);
+      
+      // Konfigurasi GPIO pin sebagai input pull-up untuk button
+      pinMode(BTNPIN, INPUT_PULLUP);
+    }
+    
+    void loop()
+    {
+      // Membaca state button kemudian disimpan pada variable
+      int reading = digitalRead(BTNPIN);
+    
+      // Jika nilai button berubah, karena noise atau penekanan
+      if (reading != last_button_state)
+      {
+        // Simpan nilai milis
+        last_debounce_time = millis();
+      }
+    
+      // Jika sudah melebihi waktu untuk menunggu debouncing
+      if ((millis() - last_debounce_time) > debounce_delay)
+      {
+        // Jika state button berubah
+        if (reading != button_state)
+        {
+          button_state = reading;
+    
+          // Toggle LED hanya jika state button-nya LOW (active-low circuit)
+          if (button_state == LOW)
+          {
+            led_state = !led_state;
+          }
+        }
+      }
+    
+      // Set nilai LED state ke GPIO
+      digitalWrite(RED_LED_PIN, led_state);
+    
+      // Update variable reading untuk iterasi loop berikutnya
+      last_button_state = reading;
+    }    
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [lst:debouncing]: Contoh program pembacaan button dengan debouncing]
+
+    Figure [fig:button-debouncing] menampilkan hasil pembacaan button dengan debouncing.
+    Pada hasil tersebut dapat kita lihat bahwa setiap satu kali penekanan button, LED selalu ter-invert.
+    Kondisi yang terjadi pada program sebelumnya tanpa debouncing sudah tidak terjadi lagi.
+
+    ![Figure [fig:button-debouncing]: Pembacaan button dengan debouncing](button-debouncing.gif width=640px)
+
+    Repository Kode Program
+    ===========================
+    Kode program untuk pembacaan button tanpa debouncing dan dengan debouncing dapat didapatkan di repository ini: [button-without-debouncing](https://github.com/klinikarduino/esp32/tree/main/button-without-debouncing) dan [button-debouncing](https://github.com/klinikarduino/esp32/tree/main/button-debouncing).
+    
+    <link href='https://fonts.googleapis.com/css?family=Roboto:400,300,100,100italic,300italic,400italic,700' rel='stylesheet' type='text/css'>
+    <script>window.markdeepOptions = {'tocStyle':'long'};</script>
+    <script src="../../markdeep.min.js"></script>
+    <script>window.alreadyProcessedMarkdeep||(document.body.style.visibility="visible")</script>
+</body>

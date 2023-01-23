@@ -1,0 +1,314 @@
+<head>
+    <meta charset="utf-8" lang="en">
+    <link rel="icon" href="../../logo.png">
+    <style class="fallback">
+    body {
+        visibility: hidden;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    </style>
+</head> 
+<body>
+    **Project Dasar Arduino ESP32**
+    **Instagram: [@klinikarduino](https://www.instagram.com/klinikarduino/)**
+    **Facebook: [@klinikarduino](https://web.facebook.com/klinikarduino)**
+    **by [Erwin Setiawan](https://yohanes-erwin.github.io/)**
+    
+    <center>**[Pemrograman Arduino](../index.html)**</center>
+
+    Contoh Program
+    ===========================
+    Pada contoh program ini, kita akan menggabungkan contoh-contoh program sebelumnya untuk membuat project sederhana.
+    Kita akan menggunakan hampir semua peripheral dan sensor/aktuator yang pernah digunakan sebagai berikut:
+    * **Push button dan LED on-board**: ketika push button ditekan, LED on-board akan menyala. Kita menggunakan GPIO sebagai output untuk LED dan sebagai input untuk push button. Pembacaan akan dilakukan menggunakan interrupt.
+    * **Sensor LDR**: nilai sensor LDR akan dikirim ke PC setiap 3 detik melalui komunikasi serial. Pembacaan akan dilakukan menggunakan timer interrupt setiap periode 3 detik. ADC akan membaca nilai analog dari sensor LDR, kemudian dikirim oleh komunikasi serial.
+    * **RFID RC522, LED merah, dan LED hijau**: melakukan pembacaan tag RFID dengan modul RC522, kemudian hasilnya ditampilkan pada LED merah dan hijau. Jika tag RFID sesuai, maka LED hijau berkedip. Jika tag RFID tidak sesuai, maka LED merah berkedip. Kita menggunakan peripheral SPI untuk mengakses modul RC522.
+    * **RTC DS1307 dan OLED SSD1306**:  melakukan pembacaan waktu dari modul DS1307, kemudian hasilnya ditampilkan pada OLED SSD1306. Kita menggunakan peripheral I2C untuk mengakses modul RTC DS1307 dan OLED SSD1306.
+
+    Untuk dapat menjalankan contoh program ini diperlukan beberapa komponen:
+    * Development board ESP32
+    * Push button
+    * LDR
+    * Resistor 10KΩ
+    * 2 buah LED
+    * 2 buah resistor 100Ω
+    * RFID RC522
+    * RTC DS1307
+    * OLED SSD1306
+    * Breadboard
+    * Kabel jumper
+
+    Ilustrasi koneksi dari komponen-komponen ke ESP32 ditampilkan pada Figure [fig:project-dasar-esp32-bb].
+    Pin yang digunakan untuk menghubungkan komponen-komponen ke ESP32 ditampilkan pada Table [tab:wiring_1], Table [tab:wiring_2], Table [tab:wiring_3], dan Table [tab:wiring_4].
+
+    ![Figure [fig:project-dasar-esp32-bb]: Rangkaian breadboard untuk project dasar Arduino ESP32](project-dasar-esp32-bb.jpg width=400px)
+
+    
+    Sensor/Aktuator Pin        | ESP32 Pin
+    ---------------------------|------------------
+    LED merah                  | D25
+    LED hijau                  | D26
+    Push button                | D12
+    LDR output                 | D27
+    [Table [tab:wiring_1]: Koneksi Sensor/Aktuator ke ESP32]
+
+    RC522 Pin  | ESP32 Pin
+    -----------|------------------
+    SDA        | D21
+    SCK        | D18
+    MOSI       | D23
+    MISO       | D19
+    RST        | D22
+    3.3V       | 3.3V
+    GND        | GND
+    [Table [tab:wiring_2]: Koneksi RC522 ke ESP32]
+
+    SSD1306 Pin  | ESP32 Pin
+    -------------|------------------
+    SCL          | D32
+    SDA          | D33
+    3.3V         | 3.3V
+    GND          | GND
+    [Table [tab:wiring_3]: Koneksi SSD1306 ke ESP32]
+
+    DS1307 Pin   | ESP32 Pin
+    -------------|------------------
+    SCL          | D32
+    SDA          | D33
+    3.3V         | 3.3V
+    GND          | GND
+    [Table [tab:wiring_4]: Koneksi DS1307 ke ESP32]
+
+    Listing [lst:final_project] menampilkan contoh program project dasar Arduino ESP32.
+    Program ini merupakan gabungan dari kode-kode progam sebelumnya.
+    Ada 4 fungsi utama dari program ini yaitu push button & LED on-board, sensor LDR & serial, RFID & LED, dan RTC & OLED.
+
+    Kode yang berhubungan dengan bagian push button & LED on-board yaitu sebagai berikut:
+    * Pada **line 24 dan 27**, kita mendefinisikan pin untuk LED on-board dan push button.
+    * Pada **line 95 dan 103**, kita mengkonfigurasi GPIO sebagai output untuk LED dan sebagai input untuk push button.
+    * Pada **line 100**, kita mengatur nilai awal LED on-board ke kondisi mati.
+    * Pada **line 106**, kita menghubungkan pin GPIO input dengan interrupt untuk button. ISR untuk interrupt tersebut bernama `button_isr`.
+    * Pada **line 45-57**, kita membuat fungsi ISR `button_isr`. Fungsi ini akan menyalakan LED ketika push button ditekan.
+
+    Kode yang berhubungan dengan bagian sensor LDR & serial yaitu sebagai berikut:
+    * Pada **line 6**, kita meng-import library untuk ticker.
+    * Pada **line 42**, kita membuat objek ticker untuk timer interrupt.
+    * Pada **line 69**, kita melakukan inisialisasi serial.
+    * Pada **line 109**, kita mengkonfigurasi timer interrupt dengan periode 3 detik dan ISR yang bernama `timer_isr`.
+    * Pada **line 60-64**, kita membuat fungsi ISR `timer_isr`. Fungsi ini membaca nilai sensor LDR menggunakan ADC, kemudian nilai tersebut dikirim ke komunikasi serial.
+
+    Kode yang berhubungan dengan bagian RFID & LED yaitu sebagai berikut:
+    * Pada **line 1-2**, kita meng-import library untuk SPI dan RC522. Library RC522 dapat di-download dari [sini](https://github.com/miguelbalboa/rfid)
+    * Pada **line 14-15**, kita mendefinisikan pin untuk RST dan SS dari modul RC522.
+    * Pada **line 22-23**, kita mendefinisikan pin untuk LED merah dan hijau.
+    * Pada **line 33**, kita melakukan deklarasi objek untuk RC522 dengan dua argumen input yaitu pin RST dan SS.
+    * Pada **line 72 dan 75**, kita melakukan inisialisasi SPI dan RC522.
+    * Pada **line 93-94**, kita mengkonfigurasi GPIO untuk LED merah dan hijau.
+    * Pada **line 98-99**, kita menulis nilai awal ke GPIO untuk mematikan LED tersebut. 
+    * Pada **line 131-145**, kita melakukan pembacaan UID dari tag RFID yang terdeteksi.
+    * Pada **line 148-169**, kita melakukan pengecekan UID. Jika UID terdaftar, maka LED hijau akan berkedip. Sebaliknya, jika UID tidak terdaftar, maka LED merah akan berkedip.
+
+    Kode yang berhubungan dengan bagian RTC & OLED yaitu sebagai berikut:
+    * Pada **line 3-5**, kita meng-import library untuk I2C, RTC DS1307, dan OLED SSD1306. Library RTC DS1307 dapat di-download dari [sini](https://github.com/Makuna/Rtc). Library OLED SSD1306 dapat di-download dari [sini](https://github.com/adafruit/Adafruit_SSD1306).
+    * Pada **line 9-11**, kita melakukan pengecekan setting library agar sesuai dengan ukuran display OLED yang digunakan.
+    * Pada **line 18-19**, kita mendefinisikan pin SDA dan SCL.
+    * Pada **line 30**, kita mendefinisikan address dari module OLED SSD1306 yaitu 0x3C.
+    * Pada **line 39**, kita mendeklarasikan objek untuk OLED tersebut.
+    * Pada **line 78**, kita melakukan inisialisasi I2C dengan frekuensi clock SCL sebesar 400kHz.
+    * Pada **line 81-85**, kita melakukan inisialisasi RTC, kemudian mengatur waktu RTC ke waktu compile kode tersebut, lalu kita mulai menjalankan RTC.
+    * Pada **line 88-90**, kita melakukan inisialisasi OLED, kemudian membersihkan display OLED.
+    * Pada **line 115**, kita membaca waktu dari RTC setiap 1 detik, kemudian disimpan di variable `now`.
+    * Pada **line 118-127**, kita menampilkan waktu RTC dari variable `now` ke OLED.
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C linenumbers
+    #include <SPI.h>
+    #include <MFRC522.h>
+    #include <Wire.h>
+    #include <RtcDS1307.h>
+    #include <Adafruit_SSD1306.h>
+    #include <Ticker.h>
+
+    // Pengecekan setting ukuran OLED pada library
+    #if (SSD1306_LCDHEIGHT != 64) // 128x64 pixel
+    #error("Height incorrect, please fix Adafruit_SSD1306.h!");
+    #endif
+
+    // Pin untuk MFRC522
+    #define RST_PIN 22
+    #define SS_PIN  21
+
+    // Pin I2C
+    #define I2C_SDA 33
+    #define I2C_SCL 32
+
+    // LED pin
+    #define RED_LED_PIN     25
+    #define GREEN_LED_PIN   26
+    #define BLUE_LED_PIN    2
+
+    // Button pin
+    #define BTNPIN          12
+
+    // Address I2C OLED
+    #define OLED_ADDR 0x3C
+
+    // Deklarasi object untuk MFRC522
+    MFRC522 mfrc522(SS_PIN, RST_PIN);
+
+    // Deklarasi object untuk RTC
+    RtcDS1307<TwoWire> rtc(Wire);
+
+    // Deklarasi object untuk OLED display
+    Adafruit_SSD1306 oled;
+
+    // Timer untuk ADC
+    Ticker timer;
+
+    // ISR untuk button
+    void IRAM_ATTR button_isr()
+    { 
+      if (digitalRead(BTNPIN) == LOW) // Jika button ditekan
+      {
+        // Nyalakan LED
+        digitalWrite(BLUE_LED_PIN, HIGH);
+      }
+      else
+      {
+        // Matikan LED
+        digitalWrite(BLUE_LED_PIN, LOW);
+      }
+    }
+
+    // ISR untuk timer
+    void timer_isr()
+    {
+      // Membaca nilai sensor cahaya dan mengirim ke serial monitor
+      Serial.println(analogRead(27));
+    }
+
+    void setup()
+    {
+      // Konfigurasi komunikasi serial
+      Serial.begin(9600);
+    
+      // Inisialisasi SPI
+      SPI.begin();
+    
+      // Inisialisasi MFRC522
+      mfrc522.PCD_Init();
+
+      // Inisialisasi pin I2C
+      Wire.begin(I2C_SDA, I2C_SCL, 400000);
+    
+      // Inisialisasi RTC
+      rtc.Begin();  
+      // Men-set waktu RTC ke waktu saat kode di-compile
+      RtcDateTime compiled = RtcDateTime(__DATE__, __TIME__);
+      rtc.SetDateTime(compiled);
+      rtc.SetIsRunning(true);
+
+      // Inisialisasi OLED
+      oled.begin(SSD1306_SWITCHCAPVCC, OLED_ADDR);
+      // Membersihkan memory OLED
+      oled.clearDisplay();
+    
+      // Konfigurasi GPIO pin sebagai output untuk LED
+      pinMode(RED_LED_PIN, OUTPUT);
+      pinMode(GREEN_LED_PIN, OUTPUT);
+      pinMode(BLUE_LED_PIN, OUTPUT);
+
+      // Set nilai LED ke kondisi off
+      digitalWrite(RED_LED_PIN, HIGH);
+      digitalWrite(GREEN_LED_PIN, HIGH);
+      digitalWrite(BLUE_LED_PIN, LOW);
+
+      // Konfigurasi GPIO pin sebagai input pull-up untuk button
+      pinMode(BTNPIN, INPUT_PULLUP);
+
+      // Hubungkan interrupt handler (ISR) dengan button
+      attachInterrupt(digitalPinToInterrupt(BTNPIN), button_isr, CHANGE);
+
+      // Set ticker untuk generate interrupt setiap 3000 ms
+      timer.attach_ms(3000, timer_isr);
+    }
+
+    void loop()
+    {
+      // Read RTC date and time
+      RtcDateTime now = rtc.GetDateTime();
+        
+      // Menampilkan waktu RTC pada OLED
+      oled.clearDisplay();
+      oled.setTextSize(2);
+      oled.setTextColor(WHITE);
+      oled.setCursor(4, 12);
+      oled.printf("%04d/%02d/%02d",
+        now.Year(), now.Month(), now.Day());
+      oled.setCursor(16, 38);
+      oled.printf("%02d:%02d:%02d",
+        now.Hour(), now.Minute(), now.Second());
+      oled.display();
+    
+      // Reset loop jika tidak ada kartu RFID baru yang terdeteksi
+      // Hal ini dilakukan agar proses di dalam loop ini tidak berjalan terus menerus
+      if (!mfrc522.PICC_IsNewCardPresent())
+        return;
+
+      // Melakukan pembacaan kartu RFID
+      if (!mfrc522.PICC_ReadCardSerial())
+        return;
+
+      // Membaca UID dari kartu RFID
+      unsigned long uid = 0;
+      uid |= mfrc522.uid.uidByte[0] << 24;
+      uid |= mfrc522.uid.uidByte[1] << 16;
+      uid |= mfrc522.uid.uidByte[2] << 8;
+      uid |= mfrc522.uid.uidByte[3];
+      // Stop pembacaan kartu RFID
+      mfrc522.PICC_HaltA();
+
+      // Pengecekan UID
+      if (uid == 0xD265ADBB)
+      {
+        // Jika UID benar, maka kedipkan green LED
+        for (int i = 0; i < 3; i++)
+        {
+          digitalWrite(GREEN_LED_PIN, LOW);
+          delay(100);
+          digitalWrite(GREEN_LED_PIN, HIGH);
+          delay(100);
+        }
+      }
+      else
+      {
+        // Jika UID salah, maka kedipkan red LED
+        for (int i = 0; i < 3; i++)
+        {
+          digitalWrite(RED_LED_PIN, LOW);
+          delay(100);
+          digitalWrite(RED_LED_PIN, HIGH);
+          delay(100);
+        }
+      }
+    }
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [lst:final_project]: Contoh program project dasar Arduino ESP32]
+
+    Figure [fig:project-dasar-esp32] menampilkan hasil akhir dari program ini.
+    Berikut ini penjelasannya:
+    * Ketika push button ditekan, maka LED on-board yang berwarna biru menyala.
+    * Nilai sensor LDR dikirimkan ke PC setiap 3 detik.
+    * Ketika tag RFID yang sudah terdaftar terbaca, maka LED hijau akan berkedip, sebaliknya LED merah yang berkedip.
+    * Waktu yang berasal dari RTC, ditampilkan ke OLED setiap 1 detik.
+
+    ![Figure [fig:project-dasar-esp32]: Project dasar Arduino ESP32](project-dasar-esp32.gif width=640px)
+
+    Repository Kode Program
+    ===========================
+    Kode program untuk project dasar Arduino ESP32 dapat didapatkan di repository ini: [project-dasar-esp32](https://github.com/klinikarduino/esp32/tree/main/project-dasar-esp32).
+
+    <link href='https://fonts.googleapis.com/css?family=Roboto:400,300,100,100italic,300italic,400italic,700' rel='stylesheet' type='text/css'>
+    <script>window.markdeepOptions = {'tocStyle':'long'};</script>
+    <script src="../../markdeep.min.js"></script>
+    <script>window.alreadyProcessedMarkdeep||(document.body.style.visibility="visible")</script>
+</body>

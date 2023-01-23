@@ -1,0 +1,125 @@
+<head>
+    <meta charset="utf-8" lang="en">
+    <link rel="icon" href="../../logo.png">
+    <style class="fallback">
+    body {
+        visibility: hidden;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    </style>
+</head> 
+<body>
+    **Menampilkan Nilai Pembacaan Sensor ke OLED Display**
+    **Instagram: [@klinikarduino](https://www.instagram.com/klinikarduino/)**
+    **Facebook: [@klinikarduino](https://web.facebook.com/klinikarduino)**
+    **by [Erwin Setiawan](https://yohanes-erwin.github.io/)**
+    
+    <center>**[Pemrograman Arduino](../index.html)**</center>
+
+    Contoh Program
+    ===========================
+    Pada contoh program ini, kita akan mempelajari contoh penggunaan OLED SSD1306 untuk menampilkan nilai pembacaan sensor.
+    Sensor yang kita gunakan yaitu sensor LDR yang dibaca menggunakan ADC.
+
+    Untuk dapat menjalankan contoh program ini diperlukan beberapa komponen:
+    * Development board ESP32
+    * LDR
+    * Resistor 10KΩ
+    * OLED SSD1306
+    * Breadboard
+    * Kabel jumper
+
+    Ilustrasi koneksi dari komponen-komponen ke ESP32 ditampilkan pada Figure [fig:light-sensor-oled-ssd1306-bb].
+    Pin yang digunakan untuk menghubungkan komponen-komponen ke ESP32 ditampilkan pada Table [tab:wiring_1] dan Table [tab:wiring_2].
+
+    ![Figure [fig:light-sensor-oled-ssd1306-bb]: Rangkaian breadboard untuk program pembacaan sensor ke OLED display](light-sensor-oled-ssd1306-bb.jpg width=400px)
+
+
+    Sensor Pin        | ESP32 Pin
+    ------------------|------------------
+    LDR output        | D27
+    [Table [tab:wiring_1]: Koneksi LDR ke ESP32]
+
+    SSD1306 Pin  | ESP32 Pin
+    -------------|------------------
+    SCL          | D32
+    SDA          | D33
+    3.3V         | 3.3V
+    GND          | GND
+    [Table [tab:wiring_2]: Koneksi SSD1306 ke ESP32]
+
+    Listing [lst:adc_oled] menampilkan contoh program pembacaan sensor ke OLED display.
+    Berikut ini penjelasan cara kerja program tersebut:
+    * Pada **line 1-2**, kita meng-import library untuk I2C dan OLED SSD1306. Library OLED SSD1306 dapat di-download dari [sini](https://github.com/adafruit/Adafruit_SSD1306).
+    * Pada **line 5-7**, kita melakukan pengecekan setting library agar sesuai dengan ukuran display OLED yang digunakan.
+    * Pada **line 10-11**, kita mendefinisikan pin SDA dan SCL.
+    * Pada **line 14**, kita mendefinisikan address dari module OLED SSD1306 yaitu 0x3C.
+    * Pada **line 17**, kita mendeklarasikan objek untuk OLED tersebut.
+    * Pada **line 22**, kita melakukan inisialisasi I2C dengan frekuensi clock SCL sebesar 400kHz.
+    * Pada **line 25-27**, kita melakukan inisialisasi OLED, kemudian membersihkan display OLED tersebut.
+    * Pada **line 33**, kita membaca nilai sensor LDR dengan fungsi ADC `analogRead`, kemudian hasilnya disimpan pada variable `light_sensor`.
+    * Pada **line 36-41**, kita membersihkan OLED, mengatur font, lokasi penulisan, dan menampilkan nilai LDR ke OLED.
+    * Pada **line 43**, kita memberikan delay 500ms agar pembacaan sensor tidak terlalu cepat, sehingga dapat diamati.
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C linenumbers
+    #include <Wire.h>
+    #include <Adafruit_SSD1306.h>
+
+    // Pengecekan setting ukuran OLED pada library
+    #if (SSD1306_LCDHEIGHT != 64) // 128x64 pixel
+    #error("Height incorrect, please fix Adafruit_SSD1306.h!");
+    #endif
+
+    // Pin I2C
+    #define I2C_SDA 33
+    #define I2C_SCL 32
+
+    // Address I2C OLED
+    #define OLED_ADDR 0x3C
+
+    // Deklarasi object untuk OLED display
+    Adafruit_SSD1306 oled;
+
+    void setup()
+    {
+      // Inisialisasi pin I2C
+      Wire.begin(I2C_SDA, I2C_SCL, 400000);
+    
+      // Inisialisasi OLED
+      oled.begin(SSD1306_SWITCHCAPVCC, OLED_ADDR);
+      // Membersihkan memory OLED
+      oled.clearDisplay();
+    }
+
+    void loop()
+    {
+      // Membaca nilai LDR
+      int light_sensor = analogRead(27); // Nilai sensor LDR
+
+      // Menampilkan nilai sensor cahaya pada OLED
+      oled.clearDisplay();
+      oled.setTextSize(2);
+      oled.setTextColor(WHITE);
+      oled.setCursor(45, 25);
+      oled.print(light_sensor);
+      oled.display();
+
+      delay(500);
+    }
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [lst:adc_oled]: Contoh program pembacaan sensor ke OLED display]
+
+    Figure [fig:light-sensor-oled-ssd1306] menapilkan hasil pembacaan sensor ke OLED display.
+    Program ini dapat digunakan sebagai template untuk pembacaan sensor ke OLED display, sehingga jika kita menggunakan sensor yang lain, kita hanya perlu mengubah kode untuk pembacaan sensor-nya saja.
+
+    ![Figure [fig:light-sensor-oled-ssd1306]: Pembacaan sensor ke OLED display](light-sensor-oled-ssd1306.gif width=640px)
+
+    Repository Kode Program
+    ===========================
+    Kode program untuk pembacaan sensor ke OLED display dapat didapatkan di repository ini: [light-sensor-oled-ssd1306](https://github.com/klinikarduino/esp32/tree/main/light-sensor-oled-ssd1306).
+
+    <link href='https://fonts.googleapis.com/css?family=Roboto:400,300,100,100italic,300italic,400italic,700' rel='stylesheet' type='text/css'>
+    <script>window.markdeepOptions = {'tocStyle':'long'};</script>
+    <script src="../../markdeep.min.js"></script>
+    <script>window.alreadyProcessedMarkdeep||(document.body.style.visibility="visible")</script>
+</body>

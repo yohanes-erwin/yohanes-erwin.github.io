@@ -1,0 +1,337 @@
+<head>
+    <meta charset="utf-8" lang="en">
+    <link rel="icon" href="../../logo.png">
+    <style class="fallback">
+    body {
+        visibility: hidden;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    </style>
+</head> 
+<body>
+    **Bab 6 Serial Communication**
+    **Instagram: [@klinikarduino](https://www.instagram.com/klinikarduino/)**
+    **Facebook: [@klinikarduino](https://web.facebook.com/klinikarduino)**
+    **by [Erwin Setiawan](https://yohanes-erwin.github.io/)**
+    
+    <center>**[Pemrograman Arduino](../index.html)**</center>
+
+    Serial Communication
+    ===========================
+    Dalam bidang telekomunikasi dan transmisi data, ada dua jenis metode untuk mengirim data bit yaitu seraca paralel dan serial.
+    Perbedaan pengiriman data bit secara paralel dan serial digambarkan pada Figure [fig:parallel_serial].
+    Pada komunikasi paralel, lebih dari satu data bit dikirim bersamaan pada satu waktu melalui beberapa jalur data.
+    Sedangkan pada komunikasi serial, hanya satu data bit dikirim pada satu waktu melalui satu jalur data.
+
+    ![Figure [fig:parallel_serial]: Perbedaan komunikasi paralel dan serial. Sumber: [Wikipedia](https://en.wikipedia.org/wiki/Serial_communication)](parallel_serial.gif width=400px)
+
+    Hampir semua protocol untuk pengiriman data saat ini menggunakan metode serial.
+    Kebanyakan protocol untuk pengiriman data secara paralel sudah tidak digunakan saat ini karena beberapa alasan seperti data skew, crosstalk, dan penghematan jumlah jalur kabel yang diperlukan.
+    Beberapa contoh komunikasi paralel yang sudah jarang digunakan dan digantikan dengan komunikasi serial yaitu:
+
+    * **Parallel port** dulu digunakan untuk menghubungkan peripheral seperti printer ke PC. Saat ini printer banyak menggunakan **Serial/RS232 port** atau **USB** yang merupakan komunikasi serial.
+    * Keyboard dan mouse menggunakan komunikasi serial **PS/2** atau **USB**.
+    * Komunikasi data antara PC menggunakan **Ethernet** juga merupakan komunikasi serial.
+    * **IDE** untuk koneksi HDD ke motherboard sudah jarang digunakan. Saat ini koneksi HDD ke motherboard banyak menggunakan **SATA** yang merupakan komunikasi serial.
+    * **PCI** digunakan untuk menghubungkan graphic card ke motherboard yang merupakan komunikasi paralel. Saat ini banyak menggunakan **PCI Express** yang merupakan komunikasi serial.
+
+    Banyak sekali protocol yang menggunakan metode serial.
+    Protocol komunikasi serial yang akan dipelajari di tutorial ini yaitu protocol UART yang memiliki kepanjangan universal asynchronous receiver-transmitter. Protocol ini cukup sederhana dan banyak digunakan pada printer ataupun alat-alat industri.
+
+    Protocol UART
+    ---------------------------
+    Protocol UART menggunakan dua jalur data masing-masing untuk mengirim dan menerima data.
+    Jalur data tersebut biasa disebut TX dan RX.
+    Setiap jalur data digunakan untuk mengirim data bit secara serial.
+    Protocol yang digunakan yaitu seperti pada gambar Figure [fig:uart].
+
+    ![Figure [fig:uart]: Protocol UART](uart.jpg width=500px)
+
+    Berikut ini merupakan penjelasan protocol UART:
+
+    * Pada saat tidak ada data yang dikirim (idle), maka jalur data bernilai 1.
+    * Setiap data bit yang dikirim diawali dengan start bit yang bernilai 0.
+    * Kemudian data bit dikirm satu per satu mulai dari LSB (least significant bit) yaitu bit ke-0 sampai MSB (most significant bit) yaitu bit ke-7.
+    * Setelah itu ada parity bit yang sifatnya opsional. Parity bit ini berfungsi untuk melakukan pengecekan error pada data yang dikirim.
+    * Setiap data bit yang dikirim diakhiri dengan stop bit yang bernilai 1.
+
+    Panjang data bit yang paling umum digunakan yaitu 8-bit, tetapi panjang data bit bisa juga dari 5-bit sampai 9-bit tergantung aplikasinya.
+    Panjang stop bit tidak selalu 1 bit, tetapi bisa juga 1.5-bit atau 2-bit.
+
+    Kecepatan transfer data UART biasa dinyatakan dalam istilah baud rate.
+    Baud rate yang umum digunakan yaitu 1200, 2400, 4800, 9600, 19200, 38400, 57600, dan 115200 bps.
+    Semakin besar baud rate, maka akan semakin cepat data tersebut terkirim.
+
+    Sebagai contoh jika kita menggunakan UART dengan baud rate 9600,
+    maka untuk mengirim 1 bit perlu waktu $1/9600s=104\mu s$.
+
+    Level Tegangan
+    ---------------------------
+    Jalur TX dan RX pada blok UART akan terhubung dengan GPIO pada mikrokontroler.
+    Oleh karena itu level tegangan menjadi hal yang penting.
+    Ada dua jenis level tegangan untuk protocol UART yang paling banyak digunakan yaitu RS232 dan TTL seperti pada Figure [fig:serial_voltage].
+
+    ![Figure [fig:serial_voltage]: Level tegangan UART. Sumber: [Alicat Scientific](https://www.alicat.com/knowledge-base/rs-232-communication-protocol-alicat-instrument/)](serial_voltage.jpg width=400px)
+
+    Level tegangan RS232 merepresentasikan logika 1 dengan tegangan -3V sampai -15V, dan logika 0 dengan tegangan +3V sampai +15V.
+    Logika 1 disebut juga dengan istilah mark, sedangkan logika 0 disebut juga dengan istilah space.
+
+    Level tegangan TTL bisa bernilai 5V atau 3.3V untuk logika 1, dan 0V untuk logika 0.
+    Kebanyakan mikrokontroler menggunakan level tegangan ini.
+    Untuk melakukan konversi tegangan, maka kita dapat menggunakan IC konverter tegangan antara RS232 dan TTL dan sebaliknya.
+    Salah satu contohnya yaitu IC MAX232.
+
+    Konektor
+    ---------------------------
+    Figure [fig:db9] memperlihatkan konektor DB9 yang biasanya digunakan oleh komunikasi UART RS232.
+    Konektor tersebut bisa ditemui pada PC atau laptop zaman dahulu. 
+    Sekarang ini konektor tersebut sudah jarang ditemui pada PC ataupun laptop.
+    Sehingga, saat ini komunikasi UART banyak dilakukan melalui port USB.
+
+    ![Figure [fig:db9]: Konektor DB9 biasa digunakan untuk level tegangan RS232](db9.jpg width=200px)
+
+    Untuk melakukan komunikasi UART melalui USB perlu menggunakan IC tambahan yang mengubah protocol UART ke protocol USB dan sebaliknya.
+    Beberapa contoh IC untuk konversi USB-to-UART yang banyak digunakan yaitu CP2102, CH340, atau FT232RL.
+    IC tersebut banyak digunakan pada board Arduino ataupun sebagai modul eksternal di luar board Arduino tersebut.
+    Modul tersebut biasanya disebut juga USB-to-TTL.
+
+    Library Serial
+    ===========================
+    Pada bagian ini, kita akan belajar mengenai fungsi pada library Arduino yang diperlukan untuk komunikasi UART.
+    Beberapa fungsi yang akan kita gunakan yaitu `begin`, `print`, `println`, `available`, dan `readString`.
+    Contoh penggunaan fungsi-fungsi tersebut akan dibahas di bagian [contoh program](index.html#contohprogram).
+
+    Fungsi `begin` seperti pada Listing [lst:begin] berfungsi untuk mengkonfigurasi UART. Fungsi ini memiliki satu argumen input utama yaitu `baud`.
+    Baud rate yang biasa digunakan yaitu 9600. 
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C linenumbers
+    void begin(unsigned long baud);
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [lst:begin]: Fungsi `begin` untuk mengkonfigurasi UART]
+
+    Ada beberapa macam fungsi untuk mengirim data dari UART ke PC atau device lain (melalui pin TX) yaitu `print` atau `println`.
+    Argumen input untuk fungsi `print` dan `println` adalah semua jenis tipe data yang bisa dikirim seperti char, int, float, dan string.
+    Perbedaan dari fungsi `print` dan `println` yaitu pada `println` diakhiri dengan newline untuk pindah ke baris baru, sedangkan pada `print` tidak ada newline. 
+    Listing [lst:print] menampilkan beberapa fungsi `print`. Fungsi `println` memiliki argumen input yang sama seperti fungsi `print`.
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C linenumbers
+    size_t print(const String &s);
+    size_t print(const char str[]);
+    size_t print(char c);
+    size_t print(unsigned char b, int base);
+    size_t print(int n, int base);
+    size_t print(unsigned int n, int base);
+    size_t print(long n, int base);
+    size_t print(unsigned long n, int base);
+    size_t print(long long n, int base);
+    size_t print(unsigned long long n, int base);
+    size_t print(double n, int digits);
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [lst:print]: Fungsi `print` untuk mengirim data ke UART]
+
+    Fungsi `available` seperti pada Listing [lst:available] berfungsi untuk membaca jumlah data byte yang siap dibaca dari UART.
+    Data tersebut bisa berasal dari PC atau device lain yang terhubung ke pin RX.
+    Data byte-nya sendiri telah diterima dan disimpan di receive buffer.
+    Fungsi tersebut memiliki return bertipe `int` yang berisi jumlah data byte yang siap dibaca dari UART.
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C linenumbers
+    int available(void);
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [lst:available]: Fungsi `available` untuk membaca jumlah data byte yang siap dibaca dari UART]
+
+    Fungsi `available` hanya membaca jumlah data-nya tetapi tidak membaca isi data-nya.
+    Untuk membaca isi data-nya, kita bisa menggunakan fungsi `readString` seperti pada Listing [lst:readstring].
+    Fungsi tersebut memiliki return bertipe object `String` yang berisi data yang dibaca dari UART.
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C linenumbers
+    String readString();
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [lst:readstring]: Fungsi `readString` untuk membaca data dari UART]
+
+    Selain fungsi-fungsi yang disebutkan di sini, masih banyak fungsi-fungsi lain yang tersedia pada library Arduino.
+    Fungsi-fungsi tersebut dapat dilihat di [sini](https://www.arduino.cc/reference/en/language/functions/communication/serial/).
+
+    Block Diagram
+    ===========================
+    Ada berbagai macam cara untuk menghubungkan UART pada sebuah mikrokontroler dengan PC atau laptop.
+    Output TX dan input RX dari blok UART pada mikrokontroler biasanya memiliki tegangan 3.3V atau 5V.
+    Output dan input ini biasanya dihubungkan dengan IC untuk konversi tegangan ke RS232 atau konversi protocol ke USB.
+    Kemudian output dari IC tersebut yang akan dihubungkan ke PC atau laptop melalui kabel.
+
+    USB-to-UART On-Board
+    ---------------------------
+    Figure [fig:block_1] menampilkan koneksi paling sederhana dari komunikasi UART dengan PC.
+    Di sistem ini kita menggunakan IC UART-to-USB on-board.
+    IC tersebut sudah terpasang pada development board, jadi kita tidak perlu membeli modul tambahan lagi.
+    Jalur UART yang melewati IC tersebut biasanya digunakan juga untuk memprogram mikrokontroler tersebut.
+
+    ![Figure [fig:block_1]: Block diagram sistem dengan koneksi USB-to-UART on-board](block_1.jpg height=175px)
+    
+    USB-to-UART Eksternal
+    ---------------------------
+    Figure [fig:block_2] menampilkan koneksi komunikasi UART dengan PC dengan menggunakan modul USB-to-UART eksternal.
+    Hal ini diperlukan jika board mikrokontroler yang kita gunakan tidak memiliki IC UART-to-USB.
+    Modul USB-to-UART biasanya disebut juga dengan nama USB-to-TTL.
+
+    ![Figure [fig:block_2]: Block diagram sistem dengan koneksi USB-to-UART eksternal](block_2.jpg height=175px)
+    
+    RS232-to-UART Eksternal
+    ---------------------------
+    Figure [fig:block_3] menampilkan koneksi komunikasi UART dengan PC dengan menggunakan modul RS232-to-UART eksternal.
+    Pada sistem ini, kita tidak mengkonversi protocol UART ke USB melainkan hanya mengubah level tegangannya saja dari TTL (3.3V atau 5V) ke level RS232.
+    Modul RS232-to-UART biasanya disebut juga dengan nama RS232-to-TTL.
+
+    ![Figure [fig:block_3]: Block diagram sistem dengan koneksi RS232-to-UART eksternal](block_3.jpg height=175px)
+
+    Contoh Program
+    ===========================
+    Pada bagian ini akan dibahas tiga contoh program komunikasi serial UART yaitu serial print, serial read, dan serial data logging.
+    Block diagram yang digunakan untuk ketiga contoh program ini yaitu sistem dengan koneksi USB-to-UART on-board.
+    Oleh karena itu kita hanya perlu menghubungkan board EPS32 dengan PC atau laptop menggunakan USB. 
+
+    Serial Print
+    ---------------------------
+    Listing [lst:serial_print] menampilkan contoh program serial print.
+    Program ini berfungsi untuk mengirim berbagai macam tipe data dari ESP32 ke PC atau laptop.
+    Berikut ini penjelasan cara kerja program tersebut:
+
+    * Pada **line 4**, kita mengkonfigurasi serial dengan kecepatan 9600 bps dengan memanggil fungsi `begin`.
+    * Pada **line 7** dan **line 8** merupakan contoh penggunaan fungsi `print`. Fungsi ini akan melakukan print data tanpa diakhiri newline.
+    * Pada **line 11-13** merupakan contoh penggunaan fungsi `println`. Fungsi ini akan melakukan print data dengan diakhiri newline.
+    * Pada **line 16** merupakan contoh penggunaan fungsi `println` untuk melakukan print data integer.
+    * Pada **line 17** merupakan contoh penggunaan fungsi `println` untuk melakukan print data float.
+    * Pada **line 18** merupakan contoh penggunaan fungsi `println` untuk melakukan print data karakter ASCII.
+    * Pada **line 19** merupakan contoh penggunaan fungsi `println` untuk melakukan print data string.
+    * Pada **line 22-25** merupakan contoh penggunaan fungsi `println` untuk melakukan print data integer dengan format radix yang berbeda (binary, octal, decimal, dan hexadecimal).
+    * Pada **line 28-31** berisi contoh untuk melakukan perhitungan sederhana (luas lingkaran) kemudian mengirim hasilnya melalui serial untuk ditampilkan di PC atau laptop.
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C linenumbers
+    void setup()
+    {
+      // Konfigurasi komunikasi serial
+      Serial.begin(9600);
+    
+      // Print tanpa newline
+      Serial.print("Hello, ");
+      Serial.print("World!");
+      
+      // Print dengan newline
+      Serial.println();
+      Serial.println("Hello, ");
+      Serial.println("World!");
+    
+      // Print beberapa tipe data
+      Serial.println(168); // Print angka integer
+      Serial.println(3.14); // Print angka float
+      Serial.println('e'); // Print karakter
+      Serial.println("Arduino"); // Print string
+    
+      // Print angka dalam beberapa radix
+      Serial.println(10, BIN); // Print angka dalan biner
+      Serial.println(10, OCT); // Print angka dalan octal
+      Serial.println(10, DEC); // Print angka dalan desimal
+      Serial.println(10, HEX); // Print angka dalan hexadesimal
+    
+      // Menghitung luas lingkaran
+      int jariJari = 10;
+      float luasLingkaran = 3.14 * 10 * 10;
+      Serial.print("Luas lingkaran: ");
+      Serial.println(luasLingkaran);
+    }
+    
+    void loop()
+    {
+    }    
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [lst:serial_print]: Contoh program serial print]
+
+    Figure [fig:serial_print_res] menampilkan hasil dari contoh program serial print.
+    Pada hasil ini terlihat ketika kita menggunakan fugnsi `print`, untuk print "Hello, " pada **line 7**, maka tidak ada newline setelahnya.
+    String "World!" pada **line 8** akan tampil setelah "Hello, " tanpa ada perpindahan line (enter).
+    Fungsi `println` pada **line 11** akan memberikan perpindahan line setelah string "World!", sehingga string "Hello, " pada **line 12** akan tampil dibawahnya.
+
+    ![Figure [fig:serial_print_res]: Hasil program serial print](serial_print_res.png width=500px)
+
+    Serial Read
+    ---------------------------
+    Listing [lst:serial_read] menampilkan contoh program serial read.
+    Program ini berfungsi untuk menerima data karakter atau string dari PC atau laptop ke ESP32.
+    Contoh aplikasi real kedepannya yaitu bisa untuk melakukan pengontrolan ESP32 dari PC atau laptop.
+    Berikut ini penjelasan cara kerja program tersebut:
+
+    * Pada **line 4**, kita mengkonfigurasi serial dengan kecepatan 9600 bps dengan memanggil fungsi `begin`.
+    * Pada **line 10**, kita memanggil fungsi `available` untuk mengecek apakah ada data yang diterima.
+    * Jika ada data yang diterima, maka pada **line 13**, kita memanggil fungsi `readString` untuk membaca data tersebut lalu disimpan di variable `input`. 
+    * Kemudian pada **line 15**, kita memanggil fungsi `print` untuk mengirimkan kembali isi variable `input` ke PC atau laptop.
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C linenumbers
+    void setup()
+    {
+      // Konfigurasi komunikasi serial
+      Serial.begin(9600);
+    }
+    
+    void loop()
+    {
+      // Jika ada data pada yang berasal dari input serial monitor PC
+      if (Serial.available() > 0)
+      {
+        // Membaca data tersebut kemudian disimpan sebagai string
+        String input = Serial.readString();
+        // Print data string tersebut kembali ke output serial monitor PC
+        Serial.print(input);
+      }
+    }    
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [lst:serial_read]: Contoh program serial read]
+
+    Figure [fig:serial_read_res] menampilkan hasil dari contoh program serial read.
+    Pada program ini, kita megirimkan string Arduino, kemudian string tersebut akan dikirimkan kembali oleh ESP32 untuk ditampilkan.
+
+    ![Figure [fig:serial_read_res]: Hasil program serial read](serial_read_res.png width=500px)
+
+    Serial Data Logging
+    ---------------------------
+    Listing [lst:serial_data_logging] menampilkan contoh program serial data logging.
+    Program ini berfungsi untuk mengirim data secara periodik dari ESP32 ke PC atau laptop.
+    Untuk contoh program ini, datanya berasal dari random number, tetapi untuk aplikasi real kedepannya kita bisa mengganti data random tersebut dengan data yang berasal dari sensor.
+    Berikut ini penjelasan cara kerja program tersebut:
+
+    * Pada **line 4**, kita mengkonfigurasi serial dengan kecepatan 9600 bps dengan memanggil fungsi `begin`.
+    * Pada **line 12**, kita men-generate angka random dari 0-255 kemudian disimpan di variable `data_random`.
+    * Pada **line 13**, kita mengirim data tersebut ke PC atau laptop.
+    * Pada **line 14**, kita menambahkan delay 500ms agar proses ini dilakukan setiap 500ms. Jika kita tidak menambahkan delay, maka prosesnya akan telalu cepat dan sulit untuk diamati oleh manusia.
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C linenumbers
+    int data_random = 0;
+
+    void setup()
+    {
+      // Konfigurasi komunikasi serial
+      Serial.begin(9600);
+    }
+    
+    void loop()
+    {
+      // Print data ke serial monitor PC setiap 1 detik
+      data_random = random(256); // Angka random 0-255
+      Serial.println(data_random);
+      delay(500);
+    }     
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [lst:serial_data_logging]: Contoh program serial data logging]
+
+    Figure [fig:serial_log_res_1] menampilkan hasil dari contoh program serial data logging.
+    Nilai-nilai random yang berasal dari ESP32 akan ditampilkan pada serial monitor.
+    Selain menggunakan serial monitor, kita juga bisa menggunakan serial plotter untuk mem-plot data tersebut seperti pada Figure [fig:serial_log_res_2].
+
+    ![Figure [fig:serial_log_res_1]: Hasil program serial data logging](serial_log_res_1.png width=500px)
+
+    ![Figure [fig:serial_log_res_2]: Hasil program serial data logging pada serial plotter](serial_log_res_2.png width=500px)
+
+    Repository Kode Program
+    ===========================
+    Kode program untuk serial print, serial read, dan serial data logging dapat didapatkan di repository ini: [serial-print](https://github.com/klinikarduino/esp32/tree/main/serial-print), [serial-read](https://github.com/klinikarduino/esp32/tree/main/serial-read), dan [serial-data-logging](https://github.com/klinikarduino/esp32/tree/main/serial-data-logging).
+
+    <link href='https://fonts.googleapis.com/css?family=Roboto:400,300,100,100italic,300italic,400italic,700' rel='stylesheet' type='text/css'>
+    <script>window.markdeepOptions = {'tocStyle':'long'};</script>
+    <script src="../../markdeep.min.js"></script>
+    <script>window.alreadyProcessedMarkdeep||(document.body.style.visibility="visible")</script>
+</body>

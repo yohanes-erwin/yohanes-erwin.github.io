@@ -1,0 +1,297 @@
+<head>
+    <meta charset="utf-8" lang="en">
+    <link rel="icon" href="../../logo.png">
+    <style class="fallback">
+    body {
+        visibility: hidden;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    </style>
+</head> 
+<body>
+    **Bab 11 SPI Communication**
+    **Instagram: [@klinikarduino](https://www.instagram.com/klinikarduino/)**
+    **Facebook: [@klinikarduino](https://web.facebook.com/klinikarduino)**
+    **by [Erwin Setiawan](https://yohanes-erwin.github.io/)**
+    
+    <center>**[Pemrograman Arduino](../index.html)**</center>
+
+    SPI
+    ===========================
+    Serial Peripheral Interface (SPI) merupakan komunikasi serial synchronous yang biasa digunakan untuk jarak dekat.
+    SPI banyak digunakan untuk menghubungkan mikrokontroler dengan sensor ataupun IC lainnya.
+    SPI memiliki arsitektur master-slave yang terdiri dari biasanya satu master dan beberapa slave seperti pada Figure [fig:spi_wiring].
+
+    ![Figure [fig:spi_wiring]: Arsitektur bus SPI](spi_wiring.jpg width=500px)
+
+    SPI merupakan komunikasi [full duplex](https://id.wikipedia.org/wiki/Duplex).
+    Setiap slave memiliki jalur SS-nya masing-masing, jadi jika ada 3 slave, maka diperlukan 3 pin SS.
+    SPI memiliki 4 sinyal yaitu:
+    * **SCK**: Serial Clock (output dari master)
+    * **MISO**: Master In Slave Out (data output dari slave ke master)
+    * **MOSI**: Master Out Slave In (data output dari master ke slave)
+    * **SS**: Slave Select (output dari master sebagai indikasi data sedang di-transfer)
+
+    Protocol SPI cukup berbeda dengan protocol serial yang lain, karena pada SPI tidak ada konsep seperti transmit dan receive data.
+    Konsep yang digunakan yaitu pertukaran data antara master dan slave secara bersamaan.
+    Baik master maupun slave memiliki shift register untuk menyimpan data yang akan dipertukarkan seperti pada Figure [fig:spi_register].
+
+    Shift register tersebut dihubungkan melalui jalur MOSI dan MISO sehingga membentuk ring untuk pertukaran data.
+    Ketika pertukaran data terjadi, data bit di shift register master akan berpindah ke shift register slave dan juga sebaliknya.
+    Perpindahan data bit tersebut terjadi setiap clock SCK.
+
+    Walaupun SPI menggunakan konsep pertukaran data, tetapi pada praktiknya tidak semua data yang dikirim atau diterima dari slave berguna.
+    Dengan kata lain data tersebut bisa saja dummy atau 0 atau 1.
+    Hal ini bisa terjadi karena slave belum menerima perintah apapun dari master sehingga belum ada data yang harus dikirim ke master.
+
+    ![Figure [fig:spi_register]: Register pada device SPI](spi_register.jpg width=400px)
+
+    Figure [fig:spi_protocol] menampilkan contoh protocol SPI.
+    Ketika komunikasi terjadi, SS bernilai LOW karena biasanya sinyal ini bersifat active-low.
+    Master mengirim data byte 0x53 ke slave, kemudian slave mengirim data byte 0x46 ke master.
+    Data bit dikirim setiap ada rising edge dari clock SCK, tetapi bisa juga setiap ada falling edge tergantung konfigurasi yang dimiliki oleh masing-masing mikrokontroler.
+    Urutan data yang di-transfer adalah LSB first, tetapi bisa juga MSB first tergantung konfigurasi yang dimiliki oleh masing-masing mikrokontroler.
+    
+    ![Figure [fig:spi_protocol]: Protocol SPI. Sumber: [SparkFun](https://learn.sparkfun.com/tutorials/serial-peripheral-interface-spi/all)](spi_protocol.jpg width=400px)
+
+    RFID RC522
+    ===========================
+    RFID RC522 merupakan modul untuk membaca atau menulis tag RFID.
+    Tag RFID yang kompatibel dengan modul ini yaitu tag dengan frekuensi 13.56MHz standar ISO 14443A.
+    Modul ini dapat berkomunikasi dengan mikrokontroler menggunakan interface SPI.
+    Selain itu, modul ini juga support komunikasi yang lain yaitu I2C dan UART.
+
+    ![Figure [fig:rc522]: Modul RFID RC522](rc522.jpg width=300px)
+
+    Untuk menggunakan modul ini sudah terdapat library Arduino yang mudah digunakan.
+    Library yang akan digunakan pada tutorial ini dapat di-download dari [sini](https://github.com/miguelbalboa/rfid).
+    Dengan menggunakan library, maka akan sangat mudah sekali untuk menggunakan modul ini.
+    Kita tidak perlu mempelajari pertintah-perintah SPI dari datasheet, dan tidak perlu membuat sendiri fungsi-fungsi untuk kontrol modul ini.
+
+    Contoh Program
+    ===========================
+    Pada contoh program ini, kita akan mempelajari dua contoh program yang menggunakan SPI untuk berkomunikasi dengan RFID RC522.
+    Pada contoh pertama, kita akan membaca UID dari tag RFID, kemudian ditampilkan pada serial monitor.
+    Pada contoh kedua, kita akan membaca UID dari tag RFID, kemudian membandingkan UID tersebut dengan UID yang tersimpan di program.
+    Jika UID sesuai ataupun tidak sesuai, maka akan ada indikator LED yang berkedip.
+
+    Program RC522 Serial Monitor
+    ---------------------------
+    Pada contoh program ini, kita akan membaca UID dari tag RFID, kemudian ditampilkan pada serial monitor.
+
+    Untuk dapat menjalankan contoh program ini diperlukan beberapa komponen:
+    * Development board ESP32
+    * RFID RC522
+    * Breadboard
+    * Kabel jumper
+
+    Ilustrasi koneksi dari komponen-komponen ke ESP32 ditampilkan pada Figure [fig:spi-rfid-rc522-bb].
+    Pin yang digunakan untuk menghubungkan komponen-komponen ke ESP32 ditampilkan pada Table [tab:wiring_1].
+
+    ![Figure [fig:spi-rfid-rc522-bb]: Rangkaian breadboard untuk program RC522 dengan serial monitor](spi-rfid-rc522-bb.jpg width=400px)
+
+
+    RC522 Pin  | ESP32 Pin
+    -----------|------------------
+    SDA        | D21
+    SCK        | D18
+    MOSI       | D23
+    MISO       | D19
+    RST        | D22
+    3.3V       | 3.3V
+    GND        | GND
+    [Table [tab:wiring_1]: Koneksi RC522 ke ESP32]
+
+    Listing [lst:rc522_serial] menampilkan contoh program RC522 dengan serial monitor.
+    Berikut ini penjelasan cara kerja program tersebut:
+    * Pada **line 1-2**, kita meng-import library untuk SPI dan RC522. Library RC522 dapat di-download dari [sini](https://github.com/miguelbalboa/rfid)
+    * Pada **line 5-6**, kita mendefinisikan pin untuk RST dan SS dari modul RC522.
+    * Pada **line 9**, kita melakukan deklarasi objek untuk RC522 dengan dua argumen input yaitu pin RST dan SS. 
+    * Pada **line 14-18**, kita melakukan inisialisasi serial, SPI, dan RC522.
+    * Pada **line 25-26**, kita melakukan pendeteksian apakah ada tag RFID baru. Jika tidak ada tag RFID baru yang terdeteksi, maka akan keluar dari loop (skip kode di bawahnya) dengan perintah `return`. Hal ini dilakukan agar tidak terjadi pembacaan berulang-ulang jika user menempelkan tag RFID (yang sama) cukup lama pada reader.
+    * Pada **line 29-30**, kita melakukan pembacaan isi tag RFID yang terdeteksi. Jika pembacaan gagal, maka akan keluar dari loop.
+    * Pada **line 33-37**, kita hanya mengambil informasi UID-nya saja dari hasil pembacaan RFID, kemudian disimpan pada variable `uid`.
+    * Pada **line 39**, kita stop pembacaan tag RFID tersebut.
+    * Pada **line 42-43**, kita kirim UID yang terbaca ke serial monitor.
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C linenumbers
+    #include <SPI.h>
+    #include <MFRC522.h>
+
+    // Pin untuk MFRC522
+    #define RST_PIN 22
+    #define SS_PIN  21
+
+    // Deklarasi object untuk MFRC522
+    MFRC522 mfrc522(SS_PIN, RST_PIN);
+
+    void setup()
+    {
+      // Inisialisasi serial
+      Serial.begin(9600);
+      // Inisialisasi SPI
+      SPI.begin();
+      // Inisialisasi MFRC522
+      mfrc522.PCD_Init();
+    }
+
+    void loop()
+    {
+      // Reset loop jika tidak ada kartu RFID baru yang terdeteksi
+      // Hal ini dilakukan agar proses di dalam loop ini tidak berjalan terus menerus
+      if (!mfrc522.PICC_IsNewCardPresent())
+        return;
+
+      // Melakukan pembacaan kartu RFID
+      if (!mfrc522.PICC_ReadCardSerial())
+        return;
+
+      // Membaca UID dari kartu RFID
+      unsigned long uid = 0;
+      uid |= mfrc522.uid.uidByte[0] << 24;
+      uid |= mfrc522.uid.uidByte[1] << 16;
+      uid |= mfrc522.uid.uidByte[2] << 8;
+      uid |= mfrc522.uid.uidByte[3];
+      // Stop pembacaan kartu RFID
+      mfrc522.PICC_HaltA();
+
+      // Print UID ke serial monitor
+      Serial.print("Card detected, UID: ");
+      Serial.println(uid, HEX);
+    }
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [lst:rc522_serial]: Contoh program RC522 serial monitor]
+
+    Figure [fig:spi-rfid-rc522] menampilkan hasil program RC522 dengan serial monitor.
+    Setiap ada tag RFID yang terbaca, maka UID dari tag tersebut akan ditampilkan pada serial monitor.
+
+    ![Figure [fig:spi-rfid-rc522]: Hasil program RC522 dengan serial monitor](spi-rfid-rc522.gif width=640px)
+
+    Program RC522 LED
+    ---------------------------
+    Pada contoh program ini, kita akan membaca UID dari tag RFID, kemudian membandingkan UID tersebut dengan UID yang tersimpan di program.
+    Jika UID sesuai, maka LED hijau akan berkedip.
+    Jika UID tidak sesuai, maka LED merah akan berkedip.
+
+    Untuk dapat menjalankan contoh program ini diperlukan beberapa komponen:
+    * Development board ESP32
+    * RFID RC522
+    * 1 buah LED
+    * 1 buah resistor 100Ω
+    * Breadboard
+    * Kabel jumper
+
+    Ilustrasi koneksi dari komponen-komponen ke ESP32 ditampilkan pada Figure [fig:rfid-rc522-led-bb].
+    Pin yang digunakan untuk menghubungkan komponen-komponen ke ESP32 ditampilkan pada Table [tab:wiring_1] dan Table [tab:wiring_2].
+
+    ![Figure [fig:rfid-rc522-led-bb]: Rangkaian breadboard untuk program RC522 dengan LED](rfid-rc522-led-bb.jpg width=400px)
+
+
+    Sensor/Actuator Pin  | ESP32 Pin
+    ---------------------|------------------
+    LED merah            | D25
+    LED hijau            | D26
+    [Table [tab:wiring_2]: Koneksi LED ke ESP32]
+
+    Listing [lst:rc522_led] menampilkan contoh program RC522 dengan LED.
+    Cara kerja program tersebut sama dengan program RC522 dengan serial monitor terutama pada bagian RC522.
+    Perbedaannya yaitu pada perbandingan UID yang terbaca dengan UID yang didaftarkan, kemudian penambahan kode untuk LED.
+
+    * Pada **line 9-10**, kita mendefinisikan pin untuk LED.
+    * Pada **line 23-28**, kita mengkonfigurasi GPIO untuk LED, kemudian menulis nilai awal ke GPIO untuk mematikan LED tersebut. 
+    * Pada **line 52-73**, kita membandingkan UID dengan nilai UID yang diinginkan. Ketika tag RFID dengan UID tersebut terbaca, maka LED hijau akan berkedip 3 kali. Sebaliknya, jika UID lain yang terbaca, maka LED merah akan berkedip 3 kali.
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C linenumbers
+    #include <SPI.h>
+    #include <MFRC522.h>
+
+    // Pin untuk MFRC522
+    #define RST_PIN 22
+    #define SS_PIN  21
+
+    // LED pin
+    #define RED_LED_PIN     25
+    #define GREEN_LED_PIN   26
+
+    // Deklarasi object untuk MFRC522
+    MFRC522 mfrc522(SS_PIN, RST_PIN);
+
+    void setup()
+    {
+      // Inisialisasi SPI
+      SPI.begin();
+      // Inisialisasi MFRC522
+      mfrc522.PCD_Init();
+    
+      // Konfigurasi GPIO pin sebagai output untuk LED
+      pinMode(RED_LED_PIN, OUTPUT);
+      pinMode(GREEN_LED_PIN, OUTPUT);
+
+      // Set nilai LED ke kondisi off
+      digitalWrite(RED_LED_PIN, HIGH);
+      digitalWrite(GREEN_LED_PIN, HIGH);
+    }
+
+    void loop()
+    {
+      // Reset loop jika tidak ada kartu RFID baru yang terdeteksi
+      // Hal ini dilakukan agar proses di dalam loop ini tidak berjalan terus menerus
+      if (!mfrc522.PICC_IsNewCardPresent())
+        return;
+
+      // Melakukan pembacaan kartu RFID
+      if (!mfrc522.PICC_ReadCardSerial())
+        return;
+
+      // Membaca UID dari kartu RFID
+      unsigned long uid = 0;
+      uid |= mfrc522.uid.uidByte[0] << 24;
+      uid |= mfrc522.uid.uidByte[1] << 16;
+      uid |= mfrc522.uid.uidByte[2] << 8;
+      uid |= mfrc522.uid.uidByte[3];
+      // Stop pembacaan kartu RFID
+      mfrc522.PICC_HaltA();
+
+      // Pengecekan UID
+      if (uid == 0xD265ADBB)
+      {
+        // Jika UID benar, maka kedipkan green LED
+        for (int i = 0; i < 3; i++)
+        {
+          digitalWrite(GREEN_LED_PIN, LOW);
+          delay(100);
+          digitalWrite(GREEN_LED_PIN, HIGH);
+          delay(100);
+        }
+      }
+      else
+      {
+        // Jika UID salah, maka kedipkan red LED
+        for (int i = 0; i < 3; i++)
+        {
+          digitalWrite(RED_LED_PIN, LOW);
+          delay(100);
+          digitalWrite(RED_LED_PIN, HIGH);
+          delay(100);
+        }
+      }
+    }
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [lst:rc522_led]: Contoh program RC522 LED]
+
+    Figure [fig:rfid-rc522-led] menampilkan contoh program RC522 dengan LED.
+    Ketika tag RFID yang sudah terdaftar dibaca oleh reader tersebut, maka LED hijau akan berkedip 3 kali.
+    Sebaliknya, ketika tag RFID yang tidak dikenal dibaca oleh reader tersebut, maka LED merah akan berkedip 3 kali.
+    Aplikasi dari contoh sederhana ini dapat diterapkan pada door access ataupun sistem parkir berbasis RFID. 
+
+    ![Figure [fig:rfid-rc522-led]: Hasil program RC522 dengan LED](rfid-rc522-led.gif width=640px)
+
+    Repository Kode Program
+    ===========================
+    Kode program untuk RC522 dengan serial monitor dan RC522 dengan LED dapat didapatkan di repository ini: [spi-rfid-rc522](https://github.com/klinikarduino/esp32/tree/main/spi-rfid-rc522) dan [rfid-rc522-led](https://github.com/klinikarduino/esp32/tree/main/rfid-rc522-led).
+
+    <link href='https://fonts.googleapis.com/css?family=Roboto:400,300,100,100italic,300italic,400italic,700' rel='stylesheet' type='text/css'>
+    <script>window.markdeepOptions = {'tocStyle':'long'};</script>
+    <script src="../../markdeep.min.js"></script>
+    <script>window.alreadyProcessedMarkdeep||(document.body.style.visibility="visible")</script>
+</body>
