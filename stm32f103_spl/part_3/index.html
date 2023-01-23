@@ -1,0 +1,111 @@
+<head>
+    <meta charset="utf-8" lang="en">
+    <link rel="icon" href="../../logo.png">
+    <style class="fallback">
+    body {
+        visibility: hidden;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    </style>
+</head> 
+<body>
+    **Part 3 GPIO Read Button**
+    **by [Erwin Setiawan](https://yohanes-erwin.github.io/)**
+    
+    <center>**[STM32F103 SPL Tutorial](../index.html)**</center>
+
+    STM32F103 GPIO
+    ===========================
+    In this tutorial, I will explain how to use STM32F103 GPIO for reading a push button.
+    STM32F103 GPIO can be configured in 4 different modes (input mode, output mode, analog input mode, and alternate function mode).
+    For reading a button, we need to configure a GPIO pin in digital input mode.
+
+    ![](stm32f013-gpio-input.jpg width=700px)
+
+    GPIO Input Mode
+    ===========================
+    STM32F103 GPIO has 3 digital input mode: input with internal pull-up, input with internal pull-down, and input floating.
+    The logic voltage of STM32 is 3.3V, so the logic voltage for GPIO input pins are also 3.3V, but there are several pins that 5V tolerant.
+    We can use 5V logic level to this 5V tolerant input pins.
+    The table below shows I/O voltage level on STM32F103 input pins.
+
+    ![](5v_gpio_pins.png width=200px)
+
+    This is the characteristic of a GPIO pin when it is configured in input mode:
+    * The output driver is disabled.
+    * The schmitt trigger input is activated.
+    * The weak pull-up and pull-down resistors are activated or not depending on the input configuration (pull-up, pull-down, or floating).
+    * The data present on the GPIO pin is sampled into the input data register every APB2 clock cycle.
+    * A read access to the input data register obtains the GPIO pin state.
+
+    ![](gpio_input.png width=700px)
+
+    Button Circuit
+    ===========================
+    This is the button circuit for this tutorial.
+    I also add an LED in this circuit just for showing the state of the button (is pressed or not).
+    For the GPIO input mode, I use the input mode with internal pull-up,
+    therefore the button circuit is active low (when the button is pressed, the logic in input data register is "0").
+    The GPIO output mode for the LED is open-drain mode and also active low.
+
+    ![](button_circuit.png width=700px)
+
+    Example Code
+    ===========================
+    This is the example code.
+    The purpose of this code is to turn on the LED when the button is pressed and turn off the LED when it is not pressed.
+    For the project file you can get it from [here](https://github.com/yohanes-erwin/stm32f103-keil/tree/master/push-button).
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~ C linenumbers
+    #include "stm32f10x.h"
+    #include "stm32f10x_rcc.h"
+    #include "stm32f10x_gpio.h"
+    
+    GPIO_InitTypeDef GPIO_InitStruct;
+    
+    int main(void)
+    {
+        // Enable clock for GPIOA
+        RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA, ENABLE);
+    
+        // Cofigure PA0 as open-drain output
+        GPIO_InitStruct.GPIO_Pin = GPIO_Pin_0;
+        GPIO_InitStruct.GPIO_Speed = GPIO_Speed_2MHz;
+        GPIO_InitStruct.GPIO_Mode = GPIO_Mode_Out_OD;
+        GPIO_Init(GPIOA, &GPIO_InitStruct);
+     
+        // Cofigure PA1 as input with internal pull-up resistor
+        GPIO_InitStruct.GPIO_Pin = GPIO_Pin_1;
+        GPIO_InitStruct.GPIO_Speed = GPIO_Speed_2MHz;
+        GPIO_InitStruct.GPIO_Mode = GPIO_Mode_IPU;
+        GPIO_Init(GPIOA, &GPIO_InitStruct);
+    
+        while (1)
+        {
+            // If button on PA1 is pressed (button circuit is active low)
+            if (!(GPIO_ReadInputData(GPIOA) & GPIO_Pin_1))
+            {
+                // Turn on LED on PA0 (LED circuit is active low)
+                GPIO_ResetBits(GPIOA, GPIO_Pin_0);
+            }
+            else
+            {
+                // Turn off LED on PA0
+                GPIO_SetBits(GPIOA, GPIO_Pin_0);
+            }
+        }
+    }
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    You can use other GPIO input modes, which are input with internal pull-down or input floating.
+    For input floating, you must add an external pull-up or pull-down resistor.
+    This is the example circuit for input with internal pull-down and input floating with external pull-up.
+    When you use a pull-down resistor, the logic is active high (when the button is pressed, the logic in input data register is "1").
+
+    ![](button_circuit_open_drain.jpg width=500px)
+
+    <link href='https://fonts.googleapis.com/css?family=Roboto:400,300,100,100italic,300italic,400italic,700' rel='stylesheet' type='text/css'>
+    <script>window.markdeepOptions = {'tocStyle':'long'};</script>
+    <script src="../../markdeep.min.js"></script>
+    <script>window.alreadyProcessedMarkdeep||(document.body.style.visibility="visible")</script>
+</body>

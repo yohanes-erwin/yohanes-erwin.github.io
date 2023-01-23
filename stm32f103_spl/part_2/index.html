@@ -1,0 +1,116 @@
+<head>
+    <meta charset="utf-8" lang="en">
+    <link rel="icon" href="../../logo.png">
+    <style class="fallback">
+    body {
+        visibility: hidden;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    </style>
+</head> 
+<body>
+    **Part 2 GPIO Write LED**
+    **by [Erwin Setiawan](https://yohanes-erwin.github.io/)**
+    
+    <center>**[STM32F103 SPL Tutorial](../index.html)**</center>
+
+    STM32F103 GPIO
+    ===========================
+    STM32F103 GPIO are generic pins that can be configured as input or output.
+    In this tutorial, I will explain how to use STM32F103 GPIO for controlling an LED on/off.
+    STM32F103 GPIO can be configured in 4 different modes (input mode, output mode, analog input mode, and alternate function mode).
+    For controlling an LED on/off, we need to configure a GPIO pin in output mode.
+
+    ![](stm32f103-gpio.jpg width=700px)
+
+    GPIO Output Mode
+    ===========================
+    There are 2 output modes for GPIO, output open drain and output push-pull.
+    The logic voltage of STM32F103 GPIO is 3.3V, so the pin output voltage is 3.3V.
+    This is the characteristic of a GPIO pin when it is configured in output mode:
+    * The output driver is enabled.
+    * In open drain mode, a “0” in the output data register activates the N-MOS while a “1” in the output data register leaves the port in Hi-Z. (the P-MOS is never activated in open drain mode).
+    * In push-pull mode, a “0” in the output data register activates the N-MOS while a “1” in the output data register activates the P-MOS.
+    * The schmitt trigger input is activated.
+    * The weak pull-up and pull-down resistors are disabled.
+    * The data present on the GPIO pin is sampled into the input data register every APB2 clock cycle.
+    * A read access to the input data register gets the GPIO state in open drain mode.
+    * A read access to the output data register gets the last written value in push-pull mode.
+
+    ![](gpio_output.png width=700px)
+
+    LED Circuit
+    ===========================
+    This is the LED circuit that I use in this tutorial.
+    The LED configuration is active low.
+    When the PA0 is low or "0", the LED will turn on.
+    When the PA0 is high or "1", the LED will turn off.
+    The output mode that I use is output push-pull mode so,
+    when I write "0" to the output data register, the N-MOS will turn on,
+    therefore the LED will turn on (current can flow from Vdd to Vss through LED and resistor).
+    When I write "1" to the output data register, the P-MOS will turn on,
+    therefore the LED will turn off (current can’t flow from Vdd to Vdd).
+
+    ![](led-circuits.jpg width=700px)
+    
+    Example Code
+    ===========================
+    To configure PA0 in output push-pull mode, we must do this steps:
+    * Enable the peripheral clock for GPIOA. GPIOA is connected to APB2 bus.
+    * Initialize GPIOA by using GPIO_InitTypeDef struct.
+    
+    This the code to make an LED blinking, for the project file you can get it from [here](https://github.com/yohanes-erwin/stm32f103-keil/tree/master/led).
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~ C linenumbers
+    #include "stm32f10x.h"
+    #include "stm32f10x_rcc.h"
+    #include "stm32f10x_gpio.h"
+
+    void delay(unsigned int nCount);
+    GPIO_InitTypeDef GPIO_InitStruct;
+
+    int main (void)
+    {
+        // Enable clock for GPIOA
+        RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA, ENABLE);
+
+        // Configure PA0 as push-pull output
+        GPIO_InitStruct.GPIO_Pin = GPIO_Pin_0;
+        GPIO_InitStruct.GPIO_Speed = GPIO_Speed_2MHz;
+        GPIO_InitStruct.GPIO_Mode = GPIO_Mode_Out_PP;
+        GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+        while (1)
+        {
+            /* Toggle LED on PA0 */
+            // Reset bit will turn on LED (because the logic is interved)
+            GPIO_ResetBits(GPIOA, GPIO_Pin_0);
+            delay(1000);
+            // Set bit will turn off LED (because the logic is interved)
+            GPIO_SetBits(GPIOA, GPIO_Pin_0);
+            delay(1000);
+        }
+    }
+
+    // Delay function
+    void delay(unsigned int nCount)
+    {
+        unsigned int i, j;
+
+        for (i = 0; i < nCount; i++)
+            for (j = 0; j < 0x2AFF; j++);
+    }
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    It is also possible to use output open drain mode to control the LED.
+    The LED circuit is the same.
+    When I write "0" to output data register, the N-MOS will turn on,
+    therefore the LED will turn on (current can flow from Vdd to Vss through LED and resistor).
+    When I write "1" to output data register, PA0 is in Hi-Z (current can’t flow because PA0 is Hi-Z/floating),
+    therefore the LED will turn off.
+
+    <link href='https://fonts.googleapis.com/css?family=Roboto:400,300,100,100italic,300italic,400italic,700' rel='stylesheet' type='text/css'>
+    <script>window.markdeepOptions = {'tocStyle':'long'};</script>
+    <script src="../../markdeep.min.js"></script>
+    <script>window.alreadyProcessedMarkdeep||(document.body.style.visibility="visible")</script>
+</body>

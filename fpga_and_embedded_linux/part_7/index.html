@@ -1,0 +1,363 @@
+<head>
+    <meta charset="utf-8" lang="en">
+    <link rel="icon" href="../../logo.png">
+    <style class="fallback">
+    body {
+        visibility: hidden;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    </style>
+</head> 
+<body>
+    **Part 7 Web Page Development using HTML, CSS, and JavaScript**
+    **by [Erwin Setiawan](https://yohanes-erwin.github.io/)**
+    
+    <center>**[Easy FPGA and Embedded Linux on ZYBO](../index.html)**</center>
+
+    Introduction
+    ===========================
+    In the previous tutorial, we have configured Linux OS, Ethernet connection, and also installed libraries on ZYBO.
+    In this tutorial, we are going to build a web page (front-end) for the GCD accelerator UI.
+    Figure [fig:gcd_gui] shows the web page.
+    To build this web page, we are going to use HTML, CSS (Bootstrap), and JavaScript (jQuery).
+
+    ![Figure [fig:gcd_gui]: The web page for GCD accelerator](gcd_gui.jpg width=700px)
+
+    First, the user types the input A and B in the text box.
+    Then, the user clicks the calculate button.
+    After that, the result C is displayed.
+    Furthermore, the chart displays the execution time of hardware and software GCD, and also the speed up.
+
+    Prerequisites
+    ===========================
+    We are going to use the following CSS and JavaScript libraries:
+    * Bootstrap
+        * [bootstrap.min.css](https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css)
+        * [bootstrap.min.js](https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js)
+    * jQuery
+        * [jquery-3.3.1.min.js](https://code.jquery.com/jquery-3.3.1.min.js)
+    * Popper.js
+        * [popper.min.js](https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js)
+    * D3.js
+        * [d3.v3.min.js](https://d3js.org/d3.v3.min.js)
+        * [d3.tip.v0.6.3.js](https://raw.githubusercontent.com/yohanes-erwin/handsonembedded/master/gcd_accelerator/part_8_web_server/gcd_accelerator/static/d3.tip.v0.6.3.js)
+    You can download the full source code of this tutorial from [here](https://github.com/yohanes-erwin/handsonembedded/tree/master/gcd_accelerator/part_7_web_page/gcd_accelerator).
+
+    Web Page
+    ===========================
+    The web page project is organized as in Figure [fig:folder_structure_web_page].
+    Inside the **gcd_accelerator** folder, we have **static** and **templates** folder.
+    Put all of the library files inside the **static** folder and put the **index.html** inside the **templates** folder.
+
+    ![Figure [fig:folder_structure_web_page]: Folder structure of the web page](folder_structure_web_page.jpg width=250px)
+
+    HTML
+    ---------------------------
+    First, Figure [fig:gcd_web_page_layout_edit_2] shows the layout of the web page.
+    We are going to use [Bootstrap grid system](https://getbootstrap.com/docs/4.0/layout/grid/) to layout the web page.
+    It uses a series of containers, rows, and columns to layout and align content.
+
+    ![Figure [fig:gcd_web_page_layout_edit_2]: The layout of the web page](gcd_web_page_layout_edit_2.jpg width=700px)
+
+    Listing [lst:html] shows the HTML code.
+    This is how the HTML code works:
+    * First, in line 9-14, we include the CSS and JavaScript libraries.
+    * Then, in line 17 and 89, we include our custom CSS and JavaScript.
+    * In line 21, we use the **container** class. This is required when using Bootstrap default grid system.
+    * In line 24, we use the **row** class and **h-100** class. The **h-100** makes the row have a height of 100% of the web browser.
+    * In line 25, we use the **col-8**, **offset-2**, and **my-auto** class. The **col-8** defines the column size, and the **offset-2** defines the offset size. The **my-auto** class makes the column vertically center.
+    * In line 28, we use a nested Bootstrap grid system. It has two columns with a size of **col-6**.
+    * After that, inside these columns, we define our contents.
+    * The contents consists of several HTML components, such as form, input, button, span, p, and svg.
+    * Finally, don’t forget to add ID to several HTML components. So, that we can access these HTML components from our custom JavaScript code.
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ html linenumbers
+    &lt;html&gt;
+        &lt;head&gt;
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <meta http-equiv="X-UA-Compatible" content="ie=edge">
+            <title>GCD Accelerator</title>
+        
+            <!-- CSS and javascript library -->
+            <link rel="stylesheet" href="../static/bootstrap.min.css">
+            <script src="../static/jquery-3.3.1.min.js"></script>
+            <script src="../static/popper.min.js"></script>
+            <script src="../static/bootstrap.min.js"></script>
+            <script src="../static/d3.v3.min.js"></script>
+            <script src="../static/d3.tip.v0.6.3.js"></script>
+        
+            <!-- My CSS file -->
+            <link rel="stylesheet" href="../static/my_style.css">
+        &lt;/head&gt;
+        &lt;body&gt;
+            <!-- Container is required when using Bootstrap default grid system -->
+            <div class="container">
+        
+                <!-- Bootstrap grid system -->
+                <div class="row h-100">
+                    <div class="col-8 offset-2 my-auto">
+        
+                        <!-- Nested Bootstrap grid system -->
+                        <div class="row">
+                            <div class="col-6">
+        
+                                <!-- Content -->
+                                <form>
+                                    <!-- Input A -->
+                                    <div class="form-group">
+                                        <h3><b>A</b></h3>
+                                        <input type="text" id="inp_a" class="form-control">
+                                    </div>
+                                    <!-- Input B -->
+                                    <div class="form-group">
+                                        <h3><b>B</b></h3>
+                                        <input type="text" id="inp_b" class="form-control">
+                                    </div>
+                                    <!-- Buttons -->
+                                    <div class="text-center">
+                                        <div class="btn-group">
+                                            <button type="button" class="btn btn-primary" id="btn_calculate">Calculate</button>
+                                            <button type="button" class="btn btn-secondary" id="btn_reset">Reset</button>
+                                        </div>
+                                    </div>
+                                    <!-- Output C -->
+                                    <div class="text-center mt-5">
+                                        <h3>Result: <b>C = <span id="txt_c">0</span></b></h3>
+                                    </div>
+                                </form>
+                                <!-- End of content -->
+        
+                            </div>
+                            <div class="col-6">
+        
+                                <!-- Content -->
+                                <h4><b>FPGA-based GCD Accelerator</b></h4>
+                                <p>This chart compares the performance between hardware accelerator and software routine of the GCD algorithm.</p>
+                                <h4 class="text-center"><span class="badge badge-warning">C = GCD(A, B)</span></h4>
+                                <div class="row">
+                                    <div class="col-6 my-auto text-center">
+                                        <!-- Chart -->
+                                        <svg id="svg_chart"></svg>
+                                    </div>
+                                    <div class="col-6 my-auto text-center">
+                                        <!-- Speed up -->
+                                        <p>Speed Up</p>
+                                        <h1><b><span id="txt_speed_up">0</span>×</b></h1>
+                                    </div>
+                                </div>
+                                <!-- End of content -->
+        
+                            </div>
+                        </div>
+                        <!-- End of nested Bootstrap grid system -->
+        
+                    </div>
+                </div>
+                <!-- End of Bootstrap grid system -->
+        
+            </div>
+            <!-- End of container -->
+        
+            <!-- My JS file -->
+            <script src='../static/my_script.js'></script>
+        &lt;/body&gt;
+    &lt;/html&gt;
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [lst:html]: The HTML code]
+
+    CSS
+    ---------------------------
+    Listing [lst:css] shows our custom CSS code. The function of this code is for styling the chart.
+    
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ css linenumbers
+    .axis {
+        font: 12px sans-serif;
+    }
+    .axis path, .axis line {
+        fill: none;
+        stroke: #000;
+        shape-rendering: crispEdges;
+    }
+    
+    .bar {
+        fill: orange;
+    }
+    .bar:hover {
+        fill: orangered;
+    }
+    
+    .d3-tip {
+        line-height: 1;
+        font-size: 12px;
+        font-weight: bold;
+        padding: 10px;
+        background: rgb(0, 0, 0);
+        color: #fff;
+        border-radius: 2px;
+    }
+    
+    /* Creates a small triangle extender for the tooltip */
+    .d3-tip:after {
+        box-sizing: border-box;
+        display: inline;
+        width: 100%;
+        line-height: 1;
+        color: rgb(0, 0, 0);
+        content: "\25BC";
+        position: absolute;
+        text-align: center;
+    }
+    
+    /* Style northward tooltips differently */
+    .d3-tip.n:after {
+        margin: -1px 0 0 0;
+        top: 100%;
+        left: 0;
+    }
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [lst:css]: The CSS code]
+
+    JavaScript
+    ---------------------------
+    Listing [lst:js] shows our custom JavaScript code.
+    This is how the JavaScript code works:
+    * In line 1-78, it is the code for the chart. They initialize the chart.
+    * Then, in line 81-105, we define the on-click function for the button calculate. So, when we click the button this function will be executed.
+    * In line 82-87, we construct the HTTP request data that consists of input A and B of the GCD operation.
+    * Then, in line 91, we send HTTP POST request to the web server along with the data.
+    * We also defines a function that will process the HTTP response in line 92-103. It will display the result to the web page.
+    * In line 81-105, the function of the reset button is defined. Basically, it clears the HTML components.
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JavaScript linenumbers
+    var margin = {top: 20, right: 20, bottom: 20, left: 60},
+    width = 200 - margin.left - margin.right,
+    height = 200 - margin.top - margin.bottom;
+
+    var zeros = [
+        { name: 'CPU', value: 0.0 },
+        { name: 'FPGA', value: 0.0 },
+    ];
+
+    var xScale = d3.scale.ordinal()
+        .rangeRoundBands([0, width], .3)
+        .domain(zeros.map(function(d) { return d.name; }));
+
+    var yScale = d3.scale.linear()
+        .range([height, 0])
+        .domain([0, 1000]);
+
+    var xAxis = d3.svg.axis()
+        .scale(xScale)
+        .orient("bottom");
+
+    var yAxis = d3.svg.axis()
+        .scale(yScale)
+        .orient("left")
+        .ticks(5);
+
+    var svg = d3.select("#svg_chart")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
+        .append("g")
+            .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+    var tip = d3.tip()
+    .attr('class', 'd3-tip')
+        .offset([-10, 0])
+        .html(function(d) {
+            return "<strong>" + d.value + " ns</strong>";
+        })
+
+    svg.call(tip);
+
+    svg.append("g")
+            .attr("class", "x axis")
+            .attr("transform", "translate(0," + height + ")")
+        .call(xAxis)
+            .selectAll("text")
+            .style("text-anchor", "middle")
+
+    svg.append("g")
+            .attr("class", "y axis")
+        .call(yAxis)
+        .append("text")
+            .attr("transform", "rotate(-90)")
+            .attr("x", 0-(height/2))
+            .attr("y", 0-45)
+            .style("text-anchor", "middle")
+            .text("Execution time [ns]");
+
+    svg.selectAll("bar")
+            .data(zeros)
+            .enter()
+        .append("rect")
+            .attr("class", "bar")
+            .attr("x", function(d) { return xScale(d.name); })
+            .attr("width", xScale.rangeBand())
+            .attr("y", function(d) { return yScale(d.value); })
+            .attr("height", function(d) { return height - yScale(d.value); })
+            .on('mouseover', tip.show)
+            .on('mouseout', tip.hide);
+
+    function updateChart(data) {
+        d3.selectAll("rect")
+            .data(data)
+            .transition()
+            .duration(500)
+            .attr("y", function(d) { return yScale(d.value); })
+            .attr("height", function(d) { return height - yScale(d.value); });
+    }
+
+    // On click event for button calculate
+    $('#btn_calculate').click(function() {
+        // *** Construct HTTP request data ***
+        var request = {
+            // Get input A and B from HTML input
+            a: $('#inp_a').val(),
+            b: $('#inp_b').val(),
+        };
+        console.log(request);
+
+        // Send HTTP request to the web server, and process HTTP response
+        $.post(window.location.origin, JSON.stringify(request), function(response) {
+            console.log(response);
+
+            // *** Process HTTP response ***
+            // Display GCD result and speed up 
+            $('#txt_c').text(response.c);
+            $('#txt_speed_up').text(response.speed_up);
+            // Update chart
+            var data = [
+                { name: 'CPU', value: response.sw_time },
+                { name: 'FPGA', value: response.hw_time },
+            ];
+            updateChart(data);
+        });
+    });
+
+    // On click event for button reset
+    $('#btn_reset').click(function() {
+        // Clear all inputs and outputs
+        $('#inp_a').val('');
+        $('#inp_b').val('');
+        $('#txt_c').text('0');
+        $('#txt_speed_up').text('0');
+        updateChart(zeros);
+    });
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [lst:js]: The JavaScript code]
+
+    Summary
+    ===========================
+    In this tutorial, we have built the web page for the GCD accelerator.
+    We use HTML, CSS (Bootstrap), and JavaScript (jQuery).
+    We use these libraries in order to speed up our development time.
+    We have created a function for the buttons’ on-click event.
+    When we click the button calculate, it will send HTTP POST request to the web server, which we are going to build in the next tutorial.
+
+    <link href='https://fonts.googleapis.com/css?family=Roboto:400,300,100,100italic,300italic,400italic,700' rel='stylesheet' type='text/css'>
+    <script>window.markdeepOptions = {'tocStyle':'long'};</script>
+    <script src="../../markdeep.min.js"></script>
+    <script>window.alreadyProcessedMarkdeep||(document.body.style.visibility="visible")</script>
+</body>

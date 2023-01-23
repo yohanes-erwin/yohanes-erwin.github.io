@@ -1,0 +1,196 @@
+<head>
+    <meta charset="utf-8" lang="en">
+    <link rel="icon" href="../../logo.png">
+    <style class="fallback">
+    body {
+        visibility: hidden;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    </style>
+</head> 
+<body>
+    **Part 3 Create a Testbench for Simulating the AXI4-Lite Interface**
+    **by [Erwin Setiawan](https://yohanes-erwin.github.io/)**
+    
+    <center>**[Easy FPGA and Embedded Linux on ZYBO](../index.html)**</center>
+
+    Introduction
+    ===========================
+    In part 2, we have built the AXI4-Lite wrapper for GCD core and counters.
+    In this part, we are going to create a testbench file for simulating the AXI4-Lite wrapper.
+    This testbench simulates as if the CPU writes/reads address/data to or from the AXI4-Lite wrapper.
+    You can get the full source code of this part from [here](https://github.com/yohanes-erwin/handsonembedded/tree/master/gcd_accelerator/part_3_testbench_for_axi4_lite).
+
+    Testbench File
+    ===========================
+    Listing [lst:axi_gcd_performance_tb] shows the testbench file for simulating the **axi_gcd_performance.v**.
+    First, we instantiate the axi_gcd_performance module as **dut**, in line 26-47.
+    Then, we define Verilog [task](https://www.chipverify.com/verilog/verilog-tasks) for writing (**axi_write**) and reading (**axi_read**) to and from the dut.
+
+    To simulate the AXI4-Lite write signal, we should set the address (on **s_axi_awaddr**) of the register that we want to write to, and set the **s_axi_awvalid** to one.
+    After that, set the data on the **s_axi_wdata**, and set the **s_axi_wvalid** to one.
+
+    To simulate the AXI4-Lite read signal, we should set the address (on **s_axi_araddr**) of the register that we want to read from, and set the **s_axi_arvalid** to one.
+    After that, the data will be available on the **s_axi_ardata**.
+
+    In line 76-88, we can send the input A and B to the GCD core.
+    Then, we should initiate the operation by writing one to the **START** bit in status register.
+    After that, we should wait for several clock cycles until the operation is finished.
+    In real implementation, we should not wait for several clock cycles.
+    Instead, we should wait until the **READY** bit in status register becomes one.
+    We may use polling or interrupt method to wait for this bit becomes one.
+    Finally, read the output R.
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ none linenumbers
+    `timescale 1ns / 1ps
+
+    module axi_gcd_performance_tb();
+        localparam T = 10;
+        
+        reg aclk;
+        reg aresetn;
+        wire s_axi_arready;
+        reg [31:0] s_axi_araddr;
+        reg s_axi_arvalid; 
+        wire s_axi_awready;
+        reg [31:0] s_axi_awaddr;
+        reg s_axi_awvalid;  
+        reg s_axi_bready;
+        wire [1:0] s_axi_bresp;
+        wire s_axi_bvalid;
+        reg s_axi_rready;
+        wire [31:0] s_axi_rdata;
+        wire [1:0] s_axi_rresp;
+        wire s_axi_rvalid;
+        wire s_axi_wready;
+        reg [31:0] s_axi_wdata;
+        reg [3:0] s_axi_wstrb;
+        reg s_axi_wvalid;
+        
+        axi_gcd_performance dut
+        (
+            .aclk(aclk),
+            .aresetn(aresetn),
+            .s_axi_araddr(s_axi_araddr),
+            .s_axi_arready(s_axi_arready),
+            .s_axi_arvalid(s_axi_arvalid),
+            .s_axi_awaddr(s_axi_awaddr),
+            .s_axi_awready(s_axi_awready),
+            .s_axi_awvalid(s_axi_awvalid),
+            .s_axi_bready(s_axi_bready),
+            .s_axi_bresp(s_axi_bresp),
+            .s_axi_bvalid(s_axi_bvalid),
+            .s_axi_rdata(s_axi_rdata),
+            .s_axi_rready(s_axi_rready),
+            .s_axi_rresp(s_axi_rresp),
+            .s_axi_rvalid(s_axi_rvalid),
+            .s_axi_wdata(s_axi_wdata),
+            .s_axi_wready(s_axi_wready),
+            .s_axi_wstrb(s_axi_wstrb),
+            .s_axi_wvalid(s_axi_wvalid)
+        );
+
+        always
+        begin
+            aclk = 0;
+            #(T/2);
+            aclk = 1;
+            #(T/2);
+        end
+
+        initial
+        begin
+            // *** Initial value ***
+            s_axi_awaddr = 0;
+            s_axi_awvalid = 0;
+            s_axi_wstrb = 0;
+            s_axi_wdata = 0;
+            s_axi_wvalid = 0;
+            s_axi_bready = 1;
+            s_axi_araddr = 0;
+            s_axi_arvalid = 0;
+            s_axi_rready = 1;
+            
+            // *** Reset ***
+            aresetn = 0;
+            #(T*5);
+            aresetn = 1;
+            #(T*5);
+        
+            // *** Calculate gcd(35,25) ***
+            axi_write(8'h04, 35);   // A = 35
+            axi_write(8'h08, 25);   // B = 25
+            axi_write(8'h00, 1);    // START = 1
+            #(T*10);
+            axi_read(8'hc);         // Read R
+            
+            // *** Calculate gcd(128,72) ***
+            axi_write(8'h04, 128);  // A = 128
+            axi_write(8'h08, 72);   // B = 72
+            axi_write(8'h00, 1);    // START = 1
+            #(T*20);
+            axi_read(8'hc);         // Read R     
+        end
+
+        task axi_write;
+            input [31:0] awaddr;
+            input [31:0] wdata; 
+            begin
+                // *** Write address ***
+                s_axi_awaddr = awaddr;
+                s_axi_awvalid = 1;
+                #T;
+                s_axi_awvalid = 0;
+                // *** Write data ***
+                s_axi_wdata = wdata;
+                s_axi_wstrb = 4'hf;
+                s_axi_wvalid = 1; 
+                #T;
+                s_axi_wvalid = 0;
+                #T;
+            end
+        endtask
+        
+        task axi_read;
+            input [31:0] araddr;
+            begin
+                // *** Read address ***
+                s_axi_araddr = araddr;
+                s_axi_arvalid = 1;
+                #T;
+                s_axi_arvalid = 0;
+                #T;
+            end
+        endtask
+        
+    endmodule
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [lst:axi_gcd_performance_tb]: Verilog code of axi_gcd_performance_tb.v]
+
+    Result
+    ===========================
+    The simulation was done using Vivado simulator.
+    Figure [fig:axi_gcd_timing_edit] shows the timing diagram of the AXI4-Lite wrapper.
+    Firstly, we write the write address. Secondly, we write the write data.
+    Then, the GCD core starts the operation.
+    Thirdly, we write the read address.
+    Fourthly, we read the read data.
+
+    Every address/data transaction in AXI4-Lite occurs if both of the __*valid__ and __*ready__ signal are one.
+    This is called handshake.
+    The AXI4 master (CPU) will stretch the __*valid__ signal if the __*ready__ signal is zero, i.e. it waits until the __*read__ becomes one.
+    You can learn more on this AXI4-Lite protocol from the [AXI protocol specification](http://www.gstitt.ece.ufl.edu/courses/fall15/eel4720_5721/labs/refs/AXI4_specification.pdf).
+
+    ![Figure [fig:axi_gcd_timing_edit]: Timing diagram of the AXI4-Lite wrapper](axi_gcd_timing_edit.jpg width=700px)
+
+    Summary
+    ===========================
+    In this tutorial, we have built the testbench file for simulating the AXI4-Lite GCD.
+    This testbench file is useful for verifying our AXI4-Lite module before we synthesize the design.
+    Furthermore, by simulating the AXI4-Lite module, we can have a better understanding on how the AXI4-Lite protocol works.
+
+    <link href='https://fonts.googleapis.com/css?family=Roboto:400,300,100,100italic,300italic,400italic,700' rel='stylesheet' type='text/css'>
+    <script>window.markdeepOptions = {'tocStyle':'long'};</script>
+    <script src="../../markdeep.min.js"></script>
+    <script>window.alreadyProcessedMarkdeep||(document.body.style.visibility="visible")</script>
+</body>

@@ -1,0 +1,179 @@
+<head>
+    <meta charset="utf-8" lang="en">
+    <link rel="icon" href="../../logo.png">
+    <style class="fallback">
+    body {
+        visibility: hidden;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    </style>
+</head> 
+<body>
+    **Part 6 Configure the Linux System, Ethernet Connection, and Python Libraries**
+    **by [Erwin Setiawan](https://yohanes-erwin.github.io/)**
+    
+    <center>**[Easy FPGA and Embedded Linux on ZYBO](../index.html)**</center>
+
+    Introduction
+    ===========================
+    In the tutorial part 1-5, we have designed, simulated, and tested a system in Zynq that calculates GCD both in hardware and software.
+    In this and the next couple of tutorial, we are going to focus on the Linux OS and the web application.
+    First of all, we should install a pre-built Linux OS on the ZYBO.
+    Then, we should configure the Ethernet connection, in order to be access the network.
+    Finally, in this tutorial, we are going to install several libraries that are needed for the next couple of tutorial.
+
+    Prerequisites
+    ===========================
+    In addition to the ZYBO board, you need the following:
+    * A microSD card with 4GB or more, most preferably SanDisk.
+    * An Ethernet switch or a WiFi router (that has an Ethernet port) with an Internet connection.
+    * A VGA or HDMI monitor.
+    * A USB keyboard.
+
+    Linux OS Installation
+    ===========================
+    In this tutorial, we are going to use [Xillinux](http://xillybus.com/xillinux). It is a pre-built Linux distribution for Zedboard, ZYBO, and MicroZed.
+    It is also support full graphic desktop based on Ubuntu LTS 16.04 for ARM.
+    The VGA or HDMI output of the ZYBO board functions as the computer’s screen output.
+    We can also use keyboard and mouse.
+    So. it just like the Raspberry Pi.
+
+    Although, Xillinux supports full graphic desktop, in this tutorial, we are not going to use that.
+    We are going to use SSH to access the ZYBO.
+    In Xillinux documentation, there is a [getting started guide](http://xillybus.com/downloads/doc/xillybus_getting_started_zynq.pdf) on how to use the Xillinux.
+    Please follow that guide for the complete reference.
+
+    I am going to summarize what you need to do to get started:
+    * Download and extract the Xillinux image file: [xillinux-2.0.img.gz](http://xillybus.com/downloads/xillinux-2.0.img.gz).
+    * For windows users, download and install [Win32 Disk Imager](https://sourceforge.net/projects/win32diskimager/).
+    * Open the Win32 Disk Imager, then choose your microSD card and the image file xillinux-2.0.img. After that, press the write button.
+    * For Linux users, please follow the instructions in [getting started guide](http://xillybus.com/downloads/doc/xillybus_getting_started_zynq.pdf) page 18 (3.4.3 Loading the image (Linux)).
+    * Download and extract boot partition kit for ZYBO: [xillinux-eval-zybo-2.0c.zip](http://xillybus.com/downloads/xillinux-eval-zybo-2.0c.zip).
+    * Copy the **boot.bin** and **devicetree.dtb** from **xillinux-eval-zybo-2.0c\bootfiles\** and paste them in the microSD partition.
+    * Download pre-generated **xillydemo.bit** from [here](https://github.com/yohanes-erwin/handsonembedded/tree/master/gcd_accelerator/part_6_configure_linux_system) and copy it to the microSD partition.
+    * Before attempting to boot, please verify that the boot partition is populated as follows:
+        * **uImage**
+        * **boot.bin**
+        * **devicetree.dtb**
+        * **xillydemo.bit**
+    * Insert your microSD to ZYBO and change the jumper JP5 (near to the VGA connector) to SD.
+    * Connect a VGA or HDMI monitor and a keyboard to the ZYBO.
+    * Connect the Ethernet cable from the swicth or WiFi router and to the ZYBO.
+    * Power up your ZYBO.
+
+    After your ZYBO booted, a shell prompt is given on the monitor. Then, please follow the instruction in the getting started guide:
+    * Page 32 (4.4.1 Resize the file systems).
+    * Page 36 (4.4.2  Allow remote SSH access).
+
+    Ethernet Connection
+    ===========================
+    First, we can connect the ZYBO to the network using several different ways.
+    We can use an Ethernet switch or a WiFi router that has an Ethernet port.
+    In this case, I am going to use a WiFi router that has an Ethernet port.
+    This router is also connected to the Internet.
+    The network diagram is shown in Figure [fig:wiring_zybo_ethernet].
+
+    ![Figure [fig:wiring_zybo_ethernet]: The network diagram](wiring_zybo_ethernet.jpg width=600px)
+
+    The WiFi router is configured with DHCP feature, so the the ZYBO will get an IP address automatically (visit the WiFi router’s admin page in order to know the ZYBO’s IP address).
+    If you want to use static IP address, then you should configure the static IP address via the shell prompt.
+
+    To test the network connection, you can ping from the host PC to the ZYBO as shown in Figure [fig:ping_zybo].
+    The 192.168.1.90 is my ZYBO’s IP address.
+
+    ![Figure [fig:ping_zybo]: Ping from the host PC to the ZYBO](ping_zybo.png width=700px)
+
+    After that, you need to download SSH terminal, for example PuTTY in order to connect to the ZYBO via SSH.
+    On PuTTY, enter your ZYBO’s IP address and press enter.
+    Login to the ZYBO by typing **root** for the username and enter your root password (the one that you set before using the **passwd** command).
+    Then, you should see the shell prompt in PuTTY terminal as shown in Figure [fig:ssh_zybo].
+
+    ![Figure [fig:ssh_zybo]: Shell prompt in PuTTY terminal](ssh_zybo.png width=700px)
+
+    Until this step, you should interact to your ZYBO remotely via SSH.
+    You can disconnect the monitor and keyboard from ZYBO.
+    Next, please make sure that your ZYBO is already connected to the internet by doing ping to the Google’s DNS **8.8.8.8** as in Figure [fig:ping_google].
+
+    ![Figure [fig:ping_google]: Ping to Google’s DNS](ping_google.png width=700px)
+
+    Install Libraries
+    ===========================
+    We are going to install libraries that are required for creating a web server in Python.
+    First, we are going to use Python3 and it is already installed on Xillinux.
+    Second, we should install pip3, as shown in line 1.
+    Third, we should install Flask framework version 1.1.1, as shown in line 2.
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ shell linenumbers
+    apt-get install python3-pip
+    pip3 install flask==1.1.1
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [lst:install]: (ZYBO) Install pip3 and Flask]
+
+    Program the FPGA
+    ===========================
+    At this point, in order to program the FPGA, you can’t use the XIlinx SDK anymore.
+    Instead, please follow the following instructions.
+    First, make a folder called **workspace** in your ZYBO’s **/root**:
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ shell linenumbers
+    mkdir workspace
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [lst:mkdir]: (ZYBO) Make a workspace directory in ZYBO]
+
+    Then, in your host PC, you should copy the **system_wrapper.bit** (it is the same bitstream file as in the previous tutorial) to the ZYBO **/root/workspace** directory by using SCP program.
+    In this case, I use scp command in Git Bash tool.
+    You can also use any scp program.
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ shell linenumbers
+    cd /<PATH_TO_YOUR_VIVADO_PROJECT>/axi_gcd_performance_linux/axi_gcd_performance_linux.runs/impl_1
+    scp system_wrapper.bit root@192.168.1.90:/root/workspace/system_wrapper.bit
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [lst:bitstream]: (Host PC) Copy bitstream file from host PC to ZYBO]
+
+    In ZYBO, program the PL (FPGA) by using the **cat** command.
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ shell linenumbers
+    cat system_wrapper.bit > /dev/xdevcfg
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [lst:program_pl]: (ZYBO) Program PL (FPGA)]
+
+    After you program the FPGA with the **system_wrapper.bit**, you will not be able to connect the ZYBO to the monitor again (the SSH is still working).
+    This happens because in **system_wrapper.bit**, we didn’t add VGA controller IP core, so there is no video output to the VGA port nor to the HDMI port.
+    If you still want to use the graphic desktop, then you should redesign the Vivado project with the template provided by the Xillinux (you can found it in xillinux-eval-zybo-2.0c.zip).
+    Please refer to the getting started guide for more details.
+
+    Then, we need to download **devmem2** tool.
+    The function of this tool is similar to the XSDB.
+    So, we can test and debug the GCD core without writing any program.
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ shell linenumbers
+    wget https://raw.githubusercontent.com/hackndev/tools/master/devmem2.c --no-check-certificate
+    gcc -o devmem2 devmem2.c
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [lst:devmem2]: (ZYBO) Download and complie devmem2 tool]
+
+    Finally, enter the following command to test the GCD core.
+    In line 1-2, we write the input to the GCD core.
+    Then, in line 3, we start the GCD operation.
+    After that, in line 4, we read the GCD result.
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ shell linenumbers
+    ./devmem2 0x41000004 w 35
+    ./devmem2 0x41000008 w 25
+    ./devmem2 0x41000000 w 1
+    ./devmem2 0x4100000C
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [lst:test_gcd]: (ZYBO) Test the GCD core]
+
+    Summary
+    ===========================
+    In this tutorial, we have configure the Linux system on ZYBO by using Xillinux.
+    Then, we have connected the ZYBO to the network and Internet via the Ethernet port.
+    After that, we have installed the required libraries for the next couple of tutorial.
+    Finally, we have learned how to program the FPGA via shell prompt.
+
+    <link href='https://fonts.googleapis.com/css?family=Roboto:400,300,100,100italic,300italic,400italic,700' rel='stylesheet' type='text/css'>
+    <script>window.markdeepOptions = {'tocStyle':'long'};</script>
+    <script src="../../markdeep.min.js"></script>
+    <script>window.alreadyProcessedMarkdeep||(document.body.style.visibility="visible")</script>
+</body>

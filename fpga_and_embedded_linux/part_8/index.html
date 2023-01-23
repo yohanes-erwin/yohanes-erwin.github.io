@@ -1,0 +1,300 @@
+<head>
+    <meta charset="utf-8" lang="en">
+    <link rel="icon" href="../../logo.png">
+    <style class="fallback">
+    body {
+        visibility: hidden;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    </style>
+</head> 
+<body>
+    **Part 8 Embedded Web Server Development using Python and Flask Framework**
+    **by [Erwin Setiawan](https://yohanes-erwin.github.io/)**
+    
+    <center>**[Easy FPGA and Embedded Linux on ZYBO](../index.html)**</center>
+
+    Introduction
+    ===========================
+    In the previous tutorial, we have built the web page for GCD accelerator.
+    In this tutorial, we are going to build the embedded web server in Python.
+    It stores and delivers the web page to client (web browser) that request it.
+    We are going to use the Flask framework.
+    It is a micro web framework written in Python.
+    You can get the full source code from [here](https://github.com/yohanes-erwin/handsonembedded/tree/master/gcd_accelerator/part_8_web_server/gcd_accelerator).
+
+    Prerequisites
+    ===========================
+    In order to follow this tutorial, you should have Flask framework installed in your ZYBO.
+    Tutorial part 6 covers the Flask framework installation.
+
+    Web Server
+    ===========================
+    Listing [lst:web_server] shows Python code of the web server.
+    The server does several tasks.
+    First, it initializes the hardware GCD.
+    It calculates software GCD in C via Python C extension module.
+    Then, it also receives HTTP request (GET and POST request), processes it, and sends the HTTP response.
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Python linenumbers
+    import struct
+    from mmap import mmap
+    import swgcd
+    from flask import Flask, render_template, request, jsonify
+    
+    # physical address of AXI GCD
+    GCD_offset = 0x41000000
+    GCD_size = 0x41000FFF - GCD_offset
+    
+    # map the physical address of AXI GCD to the virtual address
+    with open("/dev/mem", "r+b" ) as f:
+        mem = mmap(f.fileno(), GCD_size, offset=GCD_offset)
+    
+    # function for calculating hardware GCD
+    def hw_gcd(a, b):
+        mem[4:8] = struct.pack("&lt;L", a)
+        mem[8:12] = struct.pack("&lt;L", b)
+        mem[0:4] = struct.pack("&lt;L", 1)
+        while struct.unpack("&lt;L", mem[0:4])[0] != 2:
+            pass
+        c = struct.unpack("&lt;L", mem[12:16])[0]
+        clks = struct.unpack("&lt;L", mem[16:20])[0]
+        return c, clks
+    
+    app = Flask(__name__)
+    
+    # handle HTTP GET request
+    @app.route('/', methods=['GET'])
+    def index():
+        return render_template('index.html')
+    
+    # handle HTTP POST request
+    @app.route('/', methods=['POST'])
+    def performance():
+        # get HTTP request data
+        message = request.get_json(force=True);
+        # get input A and B
+        a = message['a'];
+        b = message['b'];
+        
+        # calculate hardware GCD
+        hw_c, hw_clks = hw_gcd(int(a), int(b))
+        # calculate software GCD
+        sw_c, sw_clks = swgcd.sw_gcd(int(a), int(b))
+        
+        # calculate speed up in nanoseconds
+        hw_time = hw_clks * 10;   # ZYBO's FPGA clock period = 10 ns
+        sw_time = sw_clks * 10;
+        speed_up = sw_clks/hw_clks
+        # construct and send HTTP response data
+        response = { 
+            'c': hw_c,
+            'hw_time': hw_time,
+            'sw_time': sw_time,
+            'speed_up': '%.2f' % (speed_up)
+        }
+        return jsonify(response)
+    
+    if __name__ == '__main__':
+        # run the web server on the ZYBO's IP address
+        app.run(host='0.0.0.0')
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [lst:web_server]: Python code of the web server]
+
+    Accessing Hardware GCD in Python
+    ---------------------------
+    First, in line 7-8, we define the physical address of the AXI GCD.
+    Then, in line 11-12, we map that address to the virtual address space.
+    Unlike in bare-metal program, the web server program that runs on top of the Linux OS can’t access the physical memory directly.
+    The web server program can only access the virtual address space.
+    So, we need to map the physical address to the virtual address space by using **mmap** function.
+
+    In line 15-23, we define our hardware GCD function.
+    It calculates GCD using the GCD core.
+    It accesses the GCD core in FPGA via the **mem** variable.
+    The **mem** variable is like a pointer in C program.
+
+    HTTP Request and Response
+    ---------------------------
+    The web server code in line 29-30 handles the HTTP GET request from the client.
+    The web server will send the web page (**index.html**) to the client.
+    In line 34-57, the server handles the HTTP POST request from the client.
+    The web server receives input A and B for GCD calculation. Then, it calls the hardware and software GCD functions.
+    The server also calculates the execution time of hardware and software GCD.
+    The number of clock cycles is multiplied by 10 ns (the FPGA clock period).
+    The result will be sent as an HTTP response to the client.
+
+    Software GCD in Python C Extension Module
+    ---------------------------
+    For the software GCD, we are going to implement it in C as shown in Listing [lst:swgcd].
+    Then, by using Python C extension library, we are going to make it as a Python library.
+    So, we will be able to call the software GCD function that is implemented in C from the Python code in the web server.
+    The implementation of software GCD function is the same as in the tutorial part 5.
+    Then, we wrap the software GD function in Python extension module.
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C linenumbers
+    #include <Python.h>
+    #include <stdint.h>
+    #include <stdio.h>
+    #include <stdlib.h>
+    #include <unistd.h>
+    #include <string.h>
+    #include <fcntl.h>
+    #include &lt;sys/mman.h&gt;
+    #include <time.h>
+    
+    int fd;
+    static volatile uint32_t *perf_cnt_p;
+    
+    unsigned int gcd(unsigned int a, unsigned int b,  unsigned int *clks)
+    {
+        uint8_t n = 0;
+        uint32_t overhead = 0;
+    
+        // *** Map the physical address of AXI performance counter to the virtual address ***
+        fd = open("/dev/mem", O_RDWR | O_SYNC);
+        perf_cnt_p = (uint32_t *)mmap(0, getpagesize(), PROT_READ | PROT_WRITE,
+                MAP_SHARED, fd, 0x42000000);
+    
+        // *** Determine the overhead of accessing the AXI performance counter ***
+        *(perf_cnt_p+0) = 0x1;  // Start
+        *(perf_cnt_p+0) = 0x1;  // Start
+        *(perf_cnt_p+0) = 0x2;  // Stop
+        overhead = *(perf_cnt_p+1);
+    
+        // *** Start actual measurement ***
+        *(perf_cnt_p+0) = 0x1;  // Start
+        while (1)
+        {
+            if (a == b)
+                break;
+            if ((a % 2) == 0)       // a even
+            {
+                a = a >> 1;
+                if ((b % 2) == 0)   // b even
+                {
+                    b = b >> 1;
+                    n++;
+                }
+            }
+            else                    // a odd
+            {
+                if ((b % 2) == 0)   // b even
+                    b = b >> 1;
+                else                // b odd
+                {
+                    if (a > b)
+                        a = a - b;
+                    else
+                        b = b - a;
+                }
+            }
+        }
+        a = a << n;
+        *(perf_cnt_p+0) = 0x2;  // Stop
+        *clks = *(perf_cnt_p+1) - overhead;     // Read performance counter
+    
+        return a;
+    }
+    
+    static PyObject* sw_gcd(PyObject* self, PyObject* args)
+    {
+        unsigned int a, b, c, clks;
+    
+        if (!PyArg_ParseTuple(args, "II", &a, &b))
+            return NULL;
+    
+        c = gcd(a, b, &clks);
+    
+        PyObject* py = PyTuple_New(2);
+        PyTuple_SET_ITEM(py, 0, Py_BuildValue("I", c));
+        PyTuple_SET_ITEM(py, 1, Py_BuildValue("I", clks));
+    
+        return py;
+    }
+    
+    static PyMethodDef myMethods[] = {
+        { "sw_gcd", sw_gcd, METH_VARARGS, "Calculate GCD in C." },
+        { NULL, NULL, 0, NULL }
+    };
+    
+    static struct PyModuleDef myModule = {
+        PyModuleDef_HEAD_INIT,
+        "swgcd",
+        "This module provides an interface for calculating GCD in C.",
+        -1,
+        myMethods
+    };
+    
+    PyMODINIT_FUNC PyInit_swgcd(void)
+    {
+        return PyModule_Create(&myModule);
+    }
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [lst:swgcd]: C code of the software GCD]
+
+    In line 20-22, we map the physical address of the AXI performance counter to the virtual address.
+    It is similar to the Python code when we map the AXI GCD. We us the **mmap** function.
+    The **perf_cnt_p** is a pointer to the AXI performance counter.
+
+    Finally, we should make a Python script as in Listing [lst:py_install_swgcd] for installing our software GCD module.
+    The module will be installed as a Python library. So, we will be able to import it within our Python code.
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Python linenumbers
+    from distutils.core import setup, Extension
+    setup(name = 'swgcd', version = '1.0', ext_modules = [Extension('swgcd', ['sw_gcd.c'])])
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [lst:py_install_swgcd]: Python code for installing software GCD module]
+
+    Putting It All Together
+    ---------------------------
+    Now, we are ready to run our web server.
+    Please make sure your that your project folder in your ZYBO is populated as in Figure [fig:folder_structure_server].
+    After that, we are going to install the software GCD module.
+
+    ![Figure [fig:folder_structure_server]: Folder structure of the web server](folder_structure_server.jpg width=250px)
+
+    To install the module, you should execute the following command in ZYBO shell prompt.
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ shell linenumbers
+    pyton3 setup_sw_gcd.py install
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [lst:install_swgcd]: (ZYBO) Install software GCD module]
+    Then, don’t forget to program the FPGA by executing the following command.
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ shell linenumbers
+    cat system_wrapper.bit > /dev/xdevcfg
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [lst:program_fpga]: (ZYBO) Program the FPGA]
+    Finally, you can run the web server by executing the following command.
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ shell linenumbers
+    python3 app.py
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [lst:run_web_server]: (ZYBO) Run the web server]
+    The web server will be started on your ZYBO’s IP address on port 5000.
+    So, to open the web page, you should open your web browser and type the URL, for example **192.168.1.90:5000**.
+    The following video shows the final result.
+
+    ![](https://youtu.be/F4um_TcvePM)
+
+    Summary
+    ===========================
+    In this tutorial, we have learned how to build an embedded web server using Python and Flask.
+    We have learned how to access the GCD core in FPGA via the virtual address.
+    We can map the physical address of the GCD core to the virtual address by using **mmap** function.
+    It can be done both in Python or C program. We have also learned how to build a Python C extension module.
+
+    This is the final part of this tutorial series.
+    We have learned how to build a complete embedded system on the ZYBO that employs FPGA, CPU, Linux OS, and embedded web applications.
+    I hope this course will be beneficial one for beginners in Zynq FPGA and Linux. So, you can adapt this project to fulfill your needs.
+
+    What’s Next?
+    ===========================
+    There are several resources for you about Zynq development that you may want to check out.
+    Please follow this [link](../index.html#resources). 
+    I have also video course about AXI4 protocol (please follow this [link to the course](https://www.udemy.com/course/hands-on-zynq-mastering-axi4-bus-protocol/?referralCode=9636E9CDB33313D45C72)).
+    In this course, you will also learn the AXI4-Stream protocol.
+
+    <link href='https://fonts.googleapis.com/css?family=Roboto:400,300,100,100italic,300italic,400italic,700' rel='stylesheet' type='text/css'>
+    <script>window.markdeepOptions = {'tocStyle':'long'};</script>
+    <script src="../../markdeep.min.js"></script>
+    <script>window.alreadyProcessedMarkdeep||(document.body.style.visibility="visible")</script>
+</body>

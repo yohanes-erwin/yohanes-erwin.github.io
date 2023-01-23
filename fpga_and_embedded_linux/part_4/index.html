@@ -1,0 +1,133 @@
+<head>
+    <meta charset="utf-8" lang="en">
+    <link rel="icon" href="../../logo.png">
+    <style class="fallback">
+    body {
+        visibility: hidden;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    </style>
+</head> 
+<body>
+    **Part 4 Test the GCD Core with Bare Metal Application**
+    **by [Erwin Setiawan](https://yohanes-erwin.github.io/)**
+    
+    <center>**[Easy FPGA and Embedded Linux on ZYBO](../index.html)**</center>
+
+    Introduction
+    ===========================
+    In part 1-3, we have designed the RTL of the GCD core, counter, and AXI4-Lite wrapper.
+    In this part, we are going to create the system design that integrates those RTL blocks with the PS (CPU ARM Cortex-A9).
+    Then, we are going to synthesize and implement the design.
+    Finally, we are going to create a bare-metal C program for testing our GCD core.
+    In this part, we focus on the following part of the full system diagram as shown in Figure [fig:pl_ps_block].
+
+    ![Figure [fig:pl_ps_block]: System diagram of the PL and PS bare metal](pl_ps_block.jpg width=600px)
+
+    In this tutorial, I assume you already know how to use Xilinx Vivado IDE and Xilinx SDK (at least know how to build a simple project like LED blinking).
+    If you are completely new to Xilinx Vivado IDE and Xilinx SDK, I would recommend you to check out [this tutorial](https://www.udemy.com/course/hands-on-zynq-mastering-axi4-bus-protocol/?referralCode=9636E9CDB33313D45C72) for the set-by-step hands-on guide on how to use the Vivado.
+    Also, for more premium content, you may want to check out the following course. The course also covers the AXI4-Stream protocol.
+    
+    Zynq System Design
+    ===========================
+    First of all, you should create a Vivado design.
+    Then, add the AXI4-Lite GCD and AXi4-Lite performance counter (we will use this in the next tutorial).
+    Optionally, you may want to add AXI GPIO as well.
+    I sometimes use this just for sanity check.
+    Figure [fig:system_design] shows the complete system diagram.
+    Don’t forget to configure the PS with the default config file [ZYBO_C.tcl](https://github.com/yohanes-erwin/zynq7000/tree/master/configurations).
+
+    ![Figure [fig:system_design]: Block design of the system in Vivado](system_design.jpg width=700px)
+
+    After that, assign addresses to every memory mapped block (AXI4-Lite GCD, AXI4-Lite performance counter and AXI GPIO).
+    We are going to need this address when we develop the C program.
+    In my case, I set the address to the following:
+
+    ![Figure [fig:address_editor_gcd]: Address editor of the system](address_editor_gcd.jpg width=700px)
+
+    Don’t forget to add and modify the constraint file ([ZYBO_master.xdc](https://github.com/yohanes-erwin/zynq7000/tree/master/configurations)) if you want to use the AXI GPIO, i.e. connect it to the LEDs.
+    Finally, runs the synthesis, implementation, and generate the bitstream.
+
+    Xilinx System Debugger
+    ===========================
+    Xilinx System Debugger (XSDB) (or you might want to use Xilinx Microprocessor Debugger (XMD)) is a tool for testing and debugging your design (PL and PS) without writing any C program.
+    We can use this to verify the functionality of the GCD core after synthesis and implementation.
+
+    Basically, you can open this tool from Xilinx SDK. Go to **Xilinx Tools** and select **Launch Shell**.
+    Type xsdb to start.
+    Then Select the target, which is the core #0 of the ARM Cortex-A9. After that, you can use **mwr** command to write data to the GCD core and **mrd** to read data from GCD core.
+    In the following example, we calculate the **gcd(35, 25)**:
+
+    ![Figure [fig:xsdb_gcd]: Calculation example of gcd(35, 25)](xsdb_gcd.jpg width=700px)
+
+    You can also get how many clock cycles does it takes to do this GCD operation by reading the register at address 0x41000010.
+
+    C Program
+    ===========================
+    Even though our goal is to create a program on top of the Linux OS, it is a good practice especially for beginner to test and debug the hardware with a bare-metal C program.
+    Because, when you add OS to your system, it becomes quite complex and sometimes quite difficult to debug.
+    
+    So, in this section, we focus on how to build a bare-metal C program for testing the GCD core.
+    Listing [lst:main_c] shows the C program.
+    It verifies the functionality of the hardware GCD core.
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C linenumbers
+    // Author: Erwin Ouyang
+    // Date  : 5 Feb 2019
+    
+    #include <stdio.h>
+    #include <stdint.h>
+    
+    uint32_t *gcd_p;
+    
+    int main()
+    {
+        // *** Pointer to AXI GCD ***
+        gcd_p = (uint32_t *)0x41000000;
+    
+        // *** Calculate gcd(35,25) ***
+        *(gcd_p+1) = 35;	// A = 35
+        *(gcd_p+2) = 25;	// B = 35
+        *(gcd_p+0) = 0x1;	// START = 1
+        while (!(*(gcd_p+0) & (1 << 1)));	// Wait until done flag is set
+        printf("GCD(35, 25) = %d\n", (unsigned int)*(gcd_p+3));
+    
+        // *** Calculate gcd(252,76) ***
+        *(gcd_p+1) = 128;	// A = 128
+        *(gcd_p+2) = 72;	// B = 72
+        *(gcd_p+0) = 0x1;	// START = 1
+        while (!(*(gcd_p+0) & (1 << 1)));	// Wait until done flag is set
+        printf("GCD(128, 72) = %d\n", (unsigned int)*(gcd_p+3));
+    
+        return 0;
+    }
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [lst:main_c]: C program for testing the GCD core]
+
+    This is how the C program works:
+    * First, in line 7, declare a pointer that will be initialized with the physical address of the AXI4-Lite GCD.
+    * Then, in line 12, initialize the pointer with the physical address of the AXI4-Lite GCD (0x41000000). Your address may be different. Check your’s in the address editor of your Vivado project.
+    * In line 15,-16, enter the input A and B of the GCD by writing them to register **A** and **B**.
+    * In line 17, write one to the **START** bit in order to initiate the GCD operation.
+    * In line 18, wait using polling method till the **READY** flag is one. It indicates that the GCD operation is finished.
+    * Finally, in line 19, read the result from register **R**, and print it to the SDK terminal.
+    
+    This code is also available in the [repository](https://github.com/yohanes-erwin/handsonembedded/tree/master/gcd_accelerator/part_4_bare_metal_c_program).
+    
+    Figure [fig:com_terminal] shows the result.
+    The results from GCD core operation are printed on the SDK terminal.
+    It uses UART communication between ZYBO and host PC.
+
+    ![Figure [fig:com_terminal]: The result of GCD calculation on the SDK terminal](com_terminal.jpg width=700px)
+
+    Summary
+    ===========================
+    In this tutorial, you have build the Zynq system design, run the synthesize and implementation process.
+    You have learned how to debug the PL and PS using the XSDB.
+    Finally, you have learned how to create a bare-metal C program that interacts with the GCD core in the FPGA.
+
+    <link href='https://fonts.googleapis.com/css?family=Roboto:400,300,100,100italic,300italic,400italic,700' rel='stylesheet' type='text/css'>
+    <script>window.markdeepOptions = {'tocStyle':'long'};</script>
+    <script src="../../markdeep.min.js"></script>
+    <script>window.alreadyProcessedMarkdeep||(document.body.style.visibility="visible")</script>
+</body>

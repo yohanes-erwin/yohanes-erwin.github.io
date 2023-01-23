@@ -1,0 +1,325 @@
+<head>
+    <meta charset="utf-8" lang="en">
+    <link rel="icon" href="../../logo.png">
+    <style class="fallback">
+    body {
+        visibility: hidden;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    </style>
+</head> 
+<body>
+    **Part 1 RTL Simulation of the GCD Core**
+    **by [Erwin Setiawan](https://yohanes-erwin.github.io/)**
+    
+    <center>**[Easy FPGA and Embedded Linux on ZYBO](../index.html)**</center>
+
+    Introduction
+    ===========================
+    This is part 1 of the tutorial series, entitled, Easy FPGA and Embedded Linux on ZYBO.
+    In this tutorial, we are going to build the GCD accelerator core in Verilog.
+    After that, we will simulate the GCD core. We are going to use [Xilinx Vivado 2016.4](https://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/vivado-design-tools/archive.html) for this tutorial series.
+    The GCD algorithm in this tutorial is based on the code from the book [Embedded SoPC Design with Nios II Processor and Verilog Examples](https://onlinelibrary.wiley.com/doi/book/10.1002/9781118309728), page 663-679, by Pong P. Chu.
+    You can get the full source code of this part from [here](https://github.com/yohanes-erwin/handsonembedded/tree/master/gcd_accelerator/part_1_gcd_core).
+
+    GCD Algorithm
+    ===========================
+    Greatest common divisor (GCD) between two numbers is the largest number that divides them without remainder.
+    We have gcd(a, b).
+    This gcd function returns the largest number that divides both a and b without remainder.
+    For example, gcd(35, 25) is 5, and gcd(128, 72) is 8.
+
+    We will use the binary GCD algorithm.
+    It is shown in Figure [fig:gcd_algorithm].
+    This algorithm uses only subtraction and divide-by-2 operations.
+    It has six equations that should be applied repetitively until a is equal to b (equation 1).
+
+    ![Figure [fig:gcd_algorithm]: GCD algorithm](gcd_algorithm.jpg width=400px)
+
+    For example, this is step-by-step how to calculate **gcd(24, 15)**:
+
+    * **gcd(24, 15)**, apply equation 4, then the result is,
+    * **gcd(12, 15)**, apply equation 4, then the result is,
+    * **gcd(6, 15)**, apply equation 4, then the result is,
+    * **gcd(3, 15)**, apply equation 6, then the result is,
+    * **gcd(3, 12)**, apply equation 3, then the result is,
+    * **gcd(3, 6)**, apply equation 3, then the result is,
+    * **gcd(3, 3)**, apply equation 1, then the result is,
+    * **3**
+
+    Software Implementation
+    ===========================
+    Now that we have the GCD algorithm, the next step is to implement this in C program.
+    Later on, we can use this C program for both bare metal application and Linux application.
+    This C program is used for verification of the hardware implementation and performance comparison between hardware and software.
+    The C program is shown in Listing [lst:c_program].
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C linenumbers
+    uint8_t gcd(uint8_t a, uint8_t b)
+    {
+        uint8_t n = 0;
+    
+        while (1)
+        {
+            if (a == b)
+                break;
+            if ((a % 2) == 0)       // a even
+            {
+                a = a >> 1;
+                if ((b % 2) == 0)   // b even
+                {
+                    b = b >> 1;
+                    n++;
+                }
+            }
+            else                    // a odd
+            {
+                if ((b % 2) == 0)   // b even
+                    b = b >> 1;
+                else                // b odd
+                {
+                    if (a > b)
+                        a = a - b;
+                    else
+                        b = b - a;
+                }
+            }
+        }
+        a = a << n;
+    
+        return a;
+    }
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [lst:c_program]: C program of the GCD algorithm]
+
+    In equation 2, we should multiply the gcd result by 2.
+    In C program, it is implemented by counting the occurrences this condition, saved in a variable, n.
+    At the end, in line 31, we should multiply the result by 2n. Note that multiplying by 2 can be done by shifting it to the left once.
+    Then multiplying by 2n is equal to left shifting n times.
+
+    Hardware GCD Core
+    ===========================
+    Now that we have the C program for the GCD algorithm.
+    Based on this program, we can build the Verilog code.
+    The ASMD chart of the GCD algorithm is shown in Figure [fig:asmd_gcd].
+
+    The state machine has two states: **S_IDLE** and **S_OP**.
+    In **S_IDLE** state, it waits until the start signal is equal to 1.
+    In this state the ready signal is also 1 meaning that it is ready to accept new inputs.
+    In **S_OP** state, it calculates the GCD using the same algorithm as in the C program.
+    After the calculation is finished, it goes back to the **S_IDLE** state.
+    The Verilog code for this GCD core is shown in Listing [lst:verilog_gcd].
+
+    ![Figure [fig:asmd_gcd]: ASMD of the GCD algorithm](asmd_gcd.jpg width=700px)
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ none linenumbers
+    `timescale 1ns / 1ps
+
+    module gcd_core
+        (
+            input wire         clk,
+            input wire         rst_n,
+            input wire         start,
+            input wire [31:0]  a,
+            input wire [31:0]  b,
+            output wire        done,
+            output wire        ready,
+            output wire [31:0] r
+        );
+        
+        // State definition
+        localparam S_IDLE = 2'h0,
+                   S_OP = 2'h1;
+        
+        reg [1:0] _cs, _ns;
+        reg [31:0] a_cv, a_nv;
+        reg [31:0] b_cv, b_nv;
+        reg [4:0] n_cv, n_nv;
+        reg done_cv, done_nv;
+        
+        // Output
+        assign ready = (_cs == S_IDLE) ? 1 : 0;
+        assign done = done_cv;
+        assign r = a_cv;
+        
+        // Register
+        always @(posedge clk)
+        begin
+            if (!rst_n)
+            begin
+                _cs <= S_IDLE;
+                a_cv <= 0;
+                b_cv <= 0;
+                n_cv <= 0;
+                done_cv <= 0;
+            end
+            else
+            begin
+                _cs <= _ns;
+                a_cv <= a_nv;
+                b_cv <= b_nv;
+                n_cv <= n_nv;
+                done_cv <= done_nv;
+            end
+        end
+        
+        // Next state
+        always @(*)
+        begin
+            _ns = _cs;
+            a_nv = a_cv;
+            b_nv = b_cv;
+            n_nv = n_cv;
+            done_nv = 0;
+            case(_cs)
+                S_IDLE:
+                begin
+                    if (start)
+                    begin
+                        a_nv = a;
+                        b_nv = b;
+                        n_nv = 0;
+                        _ns = S_OP;
+                    end
+                end
+                S_OP:
+                begin
+                    if (a_cv == b_cv)
+                    begin
+                        a_nv = a_cv << n_cv;
+                        done_nv = 1;
+                        _ns = S_IDLE;
+                    end
+                    else
+                    begin
+                        if (!a_cv[0])       // a even
+                        begin
+                            a_nv = {1'b0, a_cv[31:1]};
+                            if (!b_cv[0])   // a and b even
+                            begin
+                                b_nv = {1'b0, b_cv[31:1]};
+                                n_nv = n_cv + 1;
+                            end
+                        end
+                        else                // a odd
+                        begin
+                            if (!b_cv[0])   // b even
+                            begin
+                                b_nv = {1'b0, b_cv[31:1]};
+                            end
+                            else            // a and b odd
+                            begin
+                                if (a_cv > b_cv)
+                                    a_nv = a_cv - b_cv;
+                                else
+                                    b_nv = b_cv - a_cv;
+                            end
+                        end
+                    end
+                end
+            endcase
+        end
+        
+    endmodule
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [lst:verilog_gcd]: Verilog code of the GCD core]
+
+    Simulation Result
+    ===========================
+    The timing diagram of the GCD core is shown in Figure [fig:gcd_core_timing].
+    In the idle state, the ready signal is 1.
+    It indicates that the GCD core is ready to accept new inputs.
+    When the GCD core is in the process of calculating GCD, the ready signal is 0, and it goes back to 1 when the process is finished.
+    The testbench file of this simulation is shown in Listing [lst:verilog_gcd_tb].
+
+    ![Figure [fig:gcd_core_timing]: Timing diagram of the GCD core](gcd_core_timing.jpg width=600px)
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ none linenumbers
+    `timescale 1ns / 1ps
+
+    module gcd_core_tb();
+        // Clock period
+        localparam T = 10;
+        
+        reg clk;
+        reg rst_n;
+        reg start;
+        reg [31:0] a;
+        reg [31:0] b;
+        wire done;
+        wire ready;
+        wire [31:0] r;
+        
+        gcd_core dut
+        (
+            .clk(clk),
+            .rst_n(rst_n),
+            .start(start),
+            .a(a),
+            .b(b),
+            .done(done),
+            .ready(ready),
+            .r(r)
+        );
+        
+        always
+        begin
+            clk = 0;
+            #(T/2);
+            clk = 1;
+            #(T/2);
+        end
+        
+        initial
+        begin
+            // Initial value
+            a = 0;
+            b = 0;
+            start = 0;
+            
+            // Reset
+            rst_n = 0;
+            #T;
+            rst_n = 1;
+            #T;
+            
+            // gcd(35, 25)
+            a = 35;
+            b = 25;
+            start = 1;
+            #T;
+            start = 0;
+            #(T*10);
+
+            // gcd(128, 72)
+            a = 128;
+            b = 72;
+            start = 1;
+            #T;
+            start = 0;
+            #(T*15);
+
+            // gcd(24, 15)
+            a = 24;
+            b = 15;
+            start = 1;
+            #T;
+            start = 0;
+            #(T*10);  
+        end
+        
+    endmodule
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [lst:verilog_gcd_tb]: Testbench code for the GCD core]
+
+    Summary
+    ===========================
+    In this tutorial, we have build a GCD core in Verilog.
+    The hardware GCD algorithm is modeled using the ASMD chart.
+    The simulation result shows that GCD core is work without any error.
+
+    <link href='https://fonts.googleapis.com/css?family=Roboto:400,300,100,100italic,300italic,400italic,700' rel='stylesheet' type='text/css'>
+    <script>window.markdeepOptions = {'tocStyle':'long'};</script>
+    <script src="../../markdeep.min.js"></script>
+    <script>window.alreadyProcessedMarkdeep||(document.body.style.visibility="visible")</script>
+</body>

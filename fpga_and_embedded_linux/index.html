@@ -1,0 +1,76 @@
+<head>
+    <meta charset="utf-8" lang="en">
+    <link rel="icon" href="../logo.png">
+    <style class="fallback">
+    body {
+        visibility: hidden;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    </style>
+</head> 
+<body>
+    **Easy FPGA and Embedded Linux on ZYBO**
+    **by [Erwin Setiawan](https://yohanes-erwin.github.io/)**
+    
+    <center>**[Home](../tutorials.html)**</center>
+
+    Introduction
+    ===================================================================================
+    In this tutorial series, I am going to share about how to build a system that consists of FPGA and Embedded Linux web application.
+    We are going to build a hardware accelerator for calculating greatest common divisor (GCD) on the FPGA.
+    The GCD core is connected to the CPU ARM Cortex-A9 through the AXI4-Lite bus.
+    On top of the Linux, we are going to build an embedded web application based on Python Flask web framework.
+    The system is illustrated in the following block diagram.
+
+    ![Figure [fig:system_block_diagram]: System block diagram](system_block_diagram.jpg width=700px)
+
+    At the end of this tutorial, you will be able to build the following system.
+    You are going to learn how to develop a system that consists of both hardware and software stack.
+    This kind of methodology is usually called hardware/software (HW/SW) co-design.
+    The hands-on skill that you are going to learn is applicable for your future project, such as IoT or Edge AI.
+
+    ![](https://youtu.be/F4um_TcvePM)
+
+    Throughout this tutorial series, you are going to learn the following technology/programming language:
+    **Zynq-7000, AXI4-Lite, Ethernet, Embedded Linux, Verilog, C, HTML, CSS, JavaScript, Python, and Flask**.
+    **The idea is that the readers can adapt this project to fulfill their needs.**
+    I hope this course will be beneficial one for beginners in Zynq FPGA and Linux.
+    So, they can accelerate their learning curve in order to build complete embedded systems that employ FPGA, CPU, Linux OS, and embedded web applications.
+
+    Even though I use ZYBO board in this tutorial, you can use other Zynq boards as well.
+    In general, once you understand the concept in this tutorial, you can apply that to any FPGA board.
+    There are several Zynq boards that already come with pre-build Linux OS.
+    So, you just need to follow the setup instructions of the boards.
+    There are several alternative boards that you may want to check out:
+
+    * [PYNQ-Z1 or PYNQ-Z2](http://www.pynq.io/board.html): It comes with pre-build Linux OS and also Python framework for interacting with the PL (FPGA). It can also support interrupt and DMA (Python API). So, you can easily (no need to know about kernel) exploit the benefits of FPGA and microprocessors to build more capable and exciting embedded systems. This board is recommended for you who want to start developing machine learning/deep learning/computer vision on FPGA.
+    * [STEMlab Red Pitaya](https://www.redpitaya.com/): It comes with high speed DAC and ADC for RF communication. It also comes with pre-installed Linux OS and also has built-in oscilloscope software. So, basically, you can use this board as a portable oscilloscope, logic analyzer, etc. This board is recommended for you who want to start developing baseband processor for RF communications on FPGA.
+
+    Contents
+    ===================================================================================
+    This tutorial is divided into several parts as follows. So, let’s get started!
+
+    * [Part 1 RTL Simulation of the GCD Core](part_1/index.html)
+    * [Part 2 Wrap the GCD Core with AXI4-Lite Interface](part_2/index.html)
+    * [Part 3 Create a Testbench for Simulating the AXI4-Lite Interface](part_3/index.html)
+    * [Part 4 Test the GCD Core with Bare Metal Application](part_4/index.html)
+    * [Part 5 Performance Comparison of the GCD Core](part_5/index.html)
+    * [Part 6 Configure the Linux System, Ethernet Connection, and Python Libraries](part_6/index.html)
+    * [Part 7 Web Page Development using HTML, CSS, and JavaScript](part_7/index.html)
+    * [Part 8 Embedded Web Server Development using Python and Flask Framework](part_8/index.html)
+
+    Resources
+    ===================================================================================
+    * **[Source Code]** Get the full source code: [handsonembedded repository](https://github.com/yohanes-erwin/handsonembedded/tree/master/gcd_accelerator).
+    * **[Book]** P. P. Chu, [Embedded SoPC Design with Nios II Processor and Verilog Examples](https://onlinelibrary.wiley.com/doi/book/10.1002/9781118309728), Wiley, 2012.
+    * **[Book]** L. H. Crockett, R. A. Elliot, M. A. Enderwitz, and R. W. Stewart, [The Zynq Book](http://www.zynqbook.com/), 2015.
+    * ARM, [AMBA AXI and ACE Protocol Specification](http://www.gstitt.ece.ufl.edu/courses/fall15/eel4720_5721/labs/refs/AXI4_specification.pdf), 2011.
+    * **[Video]** The Development Channel, [Embedded Linux with FPGA](https://www.youtube.com/playlist?list=PLo7bVbJhQ6qxRyrF7CSW3wXcbmmFl9z7-), 2016.
+    * **[Video]** Microelectronic Systems Design Research Group, [ZYNQ](https://www.youtube.com/playlist?list=PL4D6H9w4Ihdp0YRExoQXfbVMRL1GgEPCm), 2015.
+
+    <!-- Markdeep: -->
+    <link href='https://fonts.googleapis.com/css?family=Roboto:400,300,100,100italic,300italic,400italic,700' rel='stylesheet' type='text/css'>
+    <script>window.markdeepOptions = {'tocStyle':'none'};</script>
+    <script src="../markdeep.min.js"></script>
+    <script>window.alreadyProcessedMarkdeep||(document.body.style.visibility="visible")</script>
+</body>

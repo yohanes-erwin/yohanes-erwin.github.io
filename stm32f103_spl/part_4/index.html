@@ -1,0 +1,113 @@
+<head>
+    <meta charset="utf-8" lang="en">
+    <link rel="icon" href="../../logo.png">
+    <style class="fallback">
+    body {
+        visibility: hidden;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    </style>
+</head> 
+<body>
+    **Part 4 Create a Delay Function with System Timer**
+    **by [Erwin Setiawan](https://yohanes-erwin.github.io/)**
+    
+    <center>**[STM32F103 SPL Tutorial](../index.html)**</center>
+
+    STM32F103 System Timer
+    ===========================
+    STM32F103 System Timer or SysTick is a timer inside the CPU.
+    SysTick is a basic countdown timer.
+    SysTick can be polled by software or can be configured to generate an interrupt.
+    To use SysTick, we must load a value to the reload value register.
+    The width of reload value register is 24-bit, so it can counts from 0x00FFFFFF to 0.
+    In this tutorial, I will explain how to use SysTick for creating a delay function.
+    SysTick can be configured through the registers below.
+
+    ![](systick_reg.png width=700px)
+
+    To easily configure SysTick, we can use SysTick_Config() function.
+    This function is defined in core_cm3.h.
+    This function will initialize SysTick and its interrupt, then start the SysTick.
+    The counter is in free running mode to generate periodic interrupts.
+    The input parameter of this function is the number of ticks between two interrupts.
+
+    Create A Delay Function
+    ===========================
+    In this tutorial, I will create 2 delay functions (DelayUs() and DelayMs()).
+    To create DelayUs() function, we should configure the SysTick interrupt to be triggered every 1 us by using SysTick_Config() function.
+    There is a variable called usTicks that holds the value of ticks in us.
+    Every time we call DelayUs() function, we should load this variable with the delay value in us and then we poll this variable until reach 0.
+    This variable will be decremented by 1 every 1 us by SysTick_Handler() ISR.
+    To create DelayMs() function, we should load the delay value in ms, then it will be decremented by 1 every 1000 us using DelayUs() function.
+    This is the code for delay library.
+    To use the delay functions, you should call the DelayInit() function first. For the project file you can get it from [here](https://github.com/yohanes-erwin/stm32f103-keil/tree/master/delay).
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~ C linenumbers
+    #ifndef __DELAY_H
+    #define __DELAY_H
+
+    #ifdef __cplusplus
+    extern "C" {
+    #endif
+
+    #include "stm32f10x.h"
+
+    void DelayInit(void);
+    void DelayUs(uint32_t us);
+    void DelayMs(uint32_t ms);
+
+    #ifdef __cplusplus
+    }
+    #endif
+
+    #endif
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~ C linenumbers
+    #include "delay.h"
+
+    // For store tick counts in us
+    static __IO uint32_t usTicks;
+
+    // SysTick_Handler function will be called every 1 us
+    void SysTick_Handler()
+    {
+        if (usTicks != 0)
+        {
+            usTicks--;
+        }
+    }
+
+    void DelayInit()
+    {
+        // Update SystemCoreClock value
+        SystemCoreClockUpdate();
+        // Configure the SysTick timer to overflow every 1 us
+        SysTick_Config(SystemCoreClock / 1000000);
+    }
+
+    void DelayUs(uint32_t us)
+    {
+        // Reload us value
+        usTicks = us;
+        // Wait until usTick reach zero
+        while (usTicks);
+    }
+
+    void DelayMs(uint32_t ms)
+    {
+        // Wait until ms reach zero
+        while (ms--)
+        {
+            // Delay 1ms
+            DelayUs(1000);
+        }
+    }
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    <link href='https://fonts.googleapis.com/css?family=Roboto:400,300,100,100italic,300italic,400italic,700' rel='stylesheet' type='text/css'>
+    <script>window.markdeepOptions = {'tocStyle':'long'};</script>
+    <script src="../../markdeep.min.js"></script>
+    <script>window.alreadyProcessedMarkdeep||(document.body.style.visibility="visible")</script>
+</body>

@@ -118,6 +118,7 @@ a:visited {
     text-decoration: underline;
     color: inherit;
     cursor: pointer;
+	color: #3397c8;
 }
 
 a:hover {

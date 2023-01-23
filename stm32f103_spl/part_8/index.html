@@ -1,0 +1,229 @@
+<head>
+    <meta charset="utf-8" lang="en">
+    <link rel="icon" href="../../logo.png">
+    <style class="fallback">
+    body {
+        visibility: hidden;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    </style>
+</head> 
+<body>
+    **Part 8 Interfacing Unipolar Stepper Motor**
+    **by [Erwin Setiawan](https://yohanes-erwin.github.io/)**
+    
+    <center>**[STM32F103 SPL Tutorial](../index.html)**</center>
+
+    Stepper Motor
+    ===========================
+    Stepper motor is an electromechanical device that converts electrical pulses into discrete mechanical movements.
+    In this tutorial, I will explain how to control a unipolar stepper motor using STM32F103 microcontroller.
+    If you don’t know the basic of the stepper motor, I suggest you to read this post.
+    To interface a stepper motor from a microcontroller, we can’t directly drive it with GPIO pins because GPIO pins have maximum current that can sink or source from it.
+    To overcome this problem, we can use driver circuit.
+    The driver circuit for unipolar stepper motor can be built by using 4 transistors to drive large current to the 4 wires of a stepper motor.
+    It also can be built with ULN2003 IC.
+    This is the circuit for driving a unipolar stepper motor from STM32F103 by using ULN2003 IC.
+
+    ![](stepper-driver.png width=500px)
+
+    In this tutorial, I will use the 28BYJ-48 stepper motor.
+    This motor is very cheap and it also comes with driver module based on ULN2003 IC.
+    This motor runs with 5V supply and has gear inside.
+    The gear reduction ratio is approximately 64:1.
+    If you search from the internet, other people say that the gear reduction ratio is actually 63.68395:1.
+
+    ![](28byj-48.jpg width=200px)
+
+    There are 2 common modes that can be used for controlling stepper motor, full step and half step.
+    Actually there is 1 more mode that can be used for controlling stepper motor in more advanced ways.
+    The mode is called micro step, but in this tutorial, I will explain only the full step and half step.
+
+    Full Step
+    ===========================
+    The stepper motor is controlled by giving a sequence of electrical pulses.
+    That electrical pulses are applied to the 4 wires of stepper motor. Each electrical pulse is consist of 4-bits.
+    We can applied these pulses to the 4 wires by using 4 GPIO pins.
+    The full step mode has a sequence of electrical pulses that consist of 4 different pulses.
+    Every 1 sequence is equivalent to 4 steps of movement, so 1 pulse is equivalent to 1 step movement.
+    The following table is the sequence of full step mode.
+
+    ![](full-step.png width=350px)
+
+    One step movement of this motor in full step mode is 11.25°.
+    By applying these sequence once, the internal shaft of stepper motor will move 4 x 11.25° = 45°.
+    To rotate the internal shaft of stepper motor 1 revolution, we need 360° / 45° = 8 sequences (32 steps).
+    The actual shaft of this motor is geared with 64:1 gear ratio.
+    That means every actual shaft rotates 1 revolution, the internal shaft must rotate 64 revolutions, so to rotate the actual shaft 1 revolution, we need 32 x 64 = 2048 steps.
+    To move stepper motor 2048 steps, we can applied the sequence 512 times (because 1 sequence is 4 step).
+    The following code is for rotating the actual shaft of the stepper motor 1 clockwise revolution.
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~ C linenumbers
+    // One revolution CW using full step mode
+    for (cycle = 0; cycle < 512; cycle++)
+    {
+        GPIO_Write(GPIOB, 0x1000);
+        delay(5);
+        GPIO_Write(GPIOB, 0x2000);
+        delay(5);
+        GPIO_Write(GPIOB, 0x4000);
+        delay(5);
+        GPIO_Write(GPIOB, 0x8000);
+        delay(5);
+    }
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    Between each pulse in a sequence, we need to add delay, because the stepper motor works much slower compared to the execution time of a microcontroller to execute 1 line of code.
+    This delay allows stepper to move 1 step before we apply next pulse.
+    This delay is directly related to rotation speed of the shaft.
+    The smaller delay value will give faster rotation speed.
+    We can reverse the direction of the shaft rotation by reversing the applied sequence.
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~ C linenumbers
+    // One revolution CCW using full step mode
+    for (cycle = 0; cycle < 512; cycle++)
+    {
+        GPIO_Write(GPIOB, 0x8000);
+        delay(5);
+        GPIO_Write(GPIOB, 0x4000);
+        delay(5);
+        GPIO_Write(GPIOB, 0x2000);
+        delay(5);
+        GPIO_Write(GPIOB, 0x1000);
+        delay(5);
+    }
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    This is the full code for rotating stepper motor one revolution clockwise and one revolution counter-clockwise.
+    You can get the project files from [here](https://github.com/yohanes-erwin/stm32f103-keil/tree/master/stepper-motor-full-step-one-phase).
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~ C linenumbers
+    #include "stm32f10x.h"
+    #include "stm32f10x_rcc.h"
+    #include "stm32f10x_gpio.h"
+
+    void delay(unsigned int nCount);
+    GPIO_InitTypeDef GPIO_InitStruct;
+    int cycle = 0;
+
+    int main(void)
+    {
+        RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB, ENABLE);
+
+        GPIO_InitStruct.GPIO_Pin = GPIO_Pin_12 | GPIO_Pin_13 | 
+            GPIO_Pin_14 | GPIO_Pin_15;
+        GPIO_InitStruct.GPIO_Speed = GPIO_Speed_2MHz;
+        GPIO_InitStruct.GPIO_Mode = GPIO_Mode_Out_PP;
+        GPIO_Init(GPIOB, &GPIO_InitStruct);
+    
+        // One revolution CW using full step mode
+        for (cycle = 0; cycle < 512; cycle++)
+        {
+            GPIO_Write(GPIOB, 0x1000);
+            delay(5);
+            GPIO_Write(GPIOB, 0x2000);
+            delay(5);
+            GPIO_Write(GPIOB, 0x4000);
+            delay(5);
+            GPIO_Write(GPIOB, 0x8000);
+            delay(5);
+        }
+    
+        delay(1000);
+    
+        // One revolution CCW using full step mode
+        for (cycle = 0; cycle < 512; cycle++)
+        {
+            GPIO_Write(GPIOB, 0x8000);
+            delay(5);
+            GPIO_Write(GPIOB, 0x4000);
+            delay(5);
+            GPIO_Write(GPIOB, 0x2000);
+            delay(5);
+            GPIO_Write(GPIOB, 0x1000);
+            delay(5);
+        }
+    
+        while (1)
+        {
+        }
+    }
+
+    void delay(unsigned int nCount)
+    {
+        unsigned int i, j;
+
+        for (i = 0; i < nCount; i++)
+            for (j = 0; j < 0x2AFF; j++);
+    }
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    Half Step
+    ===========================
+    Half step mode consists of 8 electrical pulse for every 1 sequence.
+    The sequence for half step mode is shown in the following table.
+    The different between full step and half step is the step resolution.
+    When you use half step, you will get more smaller degree per step movement.
+    In this motor, if we use half step, you will get 5.625° per 1 step, but the total number of degree per 1 sequence is the same (5.625° x 8 = 45°).
+    The effect is the shaft rotates more smooth.
+
+    ![](half-step.png width=350px)
+
+    This is the code for rotating stepper motor one revolution clockwise and the one revolution counter-clockwise using half step mode.
+    You can get the project files from [here](https://github.com/yohanes-erwin/stm32f103-keil/tree/master/stepper-motor-half-step).
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~ C linenumbers
+    // One revolution CW using half step mode
+    for (cycle = 0; cycle < 512; cycle++)
+    {
+        GPIO_Write(GPIOB, 0x9000);
+        delay(5);
+        GPIO_Write(GPIOB, 0x1000);
+        delay(5);
+        GPIO_Write(GPIOB, 0x3000);
+        delay(5);
+        GPIO_Write(GPIOB, 0x2000);
+        delay(5);
+        GPIO_Write(GPIOB, 0x6000);
+        delay(5);
+        GPIO_Write(GPIOB, 0x4000);
+        delay(5);
+        GPIO_Write(GPIOB, 0xC000);
+        delay(5);
+        GPIO_Write(GPIOB, 0x8000);
+        delay(5);
+    }
+     
+    delay(1000);
+     
+    // One revolution CCW using half step mode
+    for (cycle = 0; cycle < 512; cycle++)
+    {
+        GPIO_Write(GPIOB, 0x8000);
+        delay(5);
+        GPIO_Write(GPIOB, 0xC000);
+        delay(5);
+        GPIO_Write(GPIOB, 0x4000);
+        delay(5);
+        GPIO_Write(GPIOB, 0x6000);
+        delay(5);
+        GPIO_Write(GPIOB, 0x2000);
+        delay(5);
+        GPIO_Write(GPIOB, 0x3000);
+        delay(5);
+        GPIO_Write(GPIOB, 0x1000);
+        delay(5);
+        GPIO_Write(GPIOB, 0x9000);
+        delay(5);
+    }
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    The result is shown in the following video.
+
+    ![](https://youtu.be/JaZ--DY3gYQ)
+
+    <link href='https://fonts.googleapis.com/css?family=Roboto:400,300,100,100italic,300italic,400italic,700' rel='stylesheet' type='text/css'>
+    <script>window.markdeepOptions = {'tocStyle':'long'};</script>
+    <script src="../../markdeep.min.js"></script>
+    <script>window.alreadyProcessedMarkdeep||(document.body.style.visibility="visible")</script>
+</body>

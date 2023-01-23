@@ -1,0 +1,83 @@
+<head>
+    <meta charset="utf-8" lang="en">
+    <link rel="icon" href="../../logo.png">
+    <style class="fallback">
+    body {
+        visibility: hidden;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    </style>
+</head> 
+<body>
+    **Part 1 Create a New Project in Keil uVision IDE**
+    **by [Erwin Setiawan](https://yohanes-erwin.github.io/)**
+    
+    <center>**[STM32F103 SPL Tutorial](../index.html)**</center>
+
+    STM32F103
+    ===========================
+    STM32F103 is an STMicroelectronics’s 32-bit microcontroller based on the ARM Cortex-M3 processor.
+    The processor clock speed is up to 72MHz.
+    It has 64 Kbytes of flash memory and 20 Kbytes of SRAM.
+    There are several development boards for this microcontroller available on the market.
+    In this tutorial, I will use this development board.
+    It has 40 pins that fit into breadboard.
+    It has 2× 12-bit ADCs, 7× timers, and Up to 9 communication interfaces (3× USART, 2× I2C, 2× SPI, 1× CAN, 1× USB).
+
+    ![](stm32f103.jpg width=300px)
+
+    ST-Link v2 and Keil uVision5
+    ===========================
+    ST-Link v2 is an in-circuit debugger and programmer for the STM8 and STM32 microcontroller families.
+    There are 2 types of ST-Link, the original version and the clone version.
+    For the IDE, I will use Keil uVision5.
+    The evaluation version of Keil uVision5 has 32 Kbytes code limitation, but for learning purpose it is enough.
+    You can download Keil uVision5 for MDK ARM from [here](https://www.keil.com/download/product/).
+    After that, you have to download MDK5 Software Packs (libraries) for this microcontroller from [here](https://www.keil.com/dd2/pack/).
+
+    ![](st-link.jpg width=600px)
+
+    Create a New Project
+    ===========================
+    Before you can create a new project in Keil, you must install the Software Packs.
+    You can install it by clicking **Pack Installer** icon on toolbar.
+    In the **Pack Installer** dialog you can select menu **File → Import**, and then select the Software Pack (the .pack file).
+
+    ![](install-pack.jpg width=600px)
+
+    To create a new project, go to **Project → New uVision Project**, give a name for that project, and then select your microcontroller (STM32F103C8).
+    After that, you can select which peripheral library that you want to use, then click the **Resolve** button.
+
+    ![](select-library.png width=600px)
+
+    Build the Project
+    ===========================
+    In the project window, you can rename the **Target 1** and **Source Group 1** folder to **STM32F103C8** and **Source** respectively.
+    Right click on **Source** folder then click **Add New Item to Group** menu.
+    Select the .c file and give a name for that file (for example main.c).
+    You can write your code in main.c file. You can build the project by clicking **Build** icon from toolbar or press **F7**.
+    Your **Built Output** should contain zero error.
+
+    ![](main-window.png width=700px)
+
+    Download the Code
+    ===========================
+    After you build the project successfully, then you can download the code into the microcontroller.
+    To do that, you need to configure the ST-Link settings by clicking **Options for Target** icon.
+    In the **Debug** tab, select ST-Link Debugger and click **Settings** button. Set the properties in **Cortex-M Target Driver Setup** dialog like this:
+
+    ![](st-link-settings-1.png width=600px)
+
+    Check the **Reset and Run** option, so the microcontroller will run the program after the download process finished.
+    If you not check this option, then you have to press the reset button to run the program.
+
+    ![](st-link-settings-2.png width=600px)
+
+    After the settings for ST-Link have been configured properly, you can start flash the microcontroller, by pressing **Download** icon from toolbar.
+    You can also debug the program from menu **Debug → Start/Stop Debug Session**.
+
+    <link href='https://fonts.googleapis.com/css?family=Roboto:400,300,100,100italic,300italic,400italic,700' rel='stylesheet' type='text/css'>
+    <script>window.markdeepOptions = {'tocStyle':'long'};</script>
+    <script src="../../markdeep.min.js"></script>
+    <script>window.alreadyProcessedMarkdeep||(document.body.style.visibility="visible")</script>
+</body>

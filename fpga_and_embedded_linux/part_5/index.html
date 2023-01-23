@@ -1,0 +1,164 @@
+<head>
+    <meta charset="utf-8" lang="en">
+    <link rel="icon" href="../../logo.png">
+    <style class="fallback">
+    body {
+        visibility: hidden;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    </style>
+</head> 
+<body>
+    **Part 5 Performance Comparison of the GCD Core**
+    **by [Erwin Setiawan](https://yohanes-erwin.github.io/)**
+    
+    <center>**[Easy FPGA and Embedded Linux on ZYBO](../index.html)**</center>
+
+    Introduction
+    ===========================
+    In the previous tutorial, we have built C program for testing the GCD core.
+    In this tutorial, we are going to improve our C program.
+    We are going to make performance comparison between hardware GCD vs. software GCD (implemented in C).
+
+    Get the full source code from [here](https://github.com/yohanes-erwin/handsonembedded/tree/master/gcd_accelerator/part_5_performance_comparison).
+    Some of the code was adapted from the book [Embedded SoPC Design with Nios II Processor and Verilog Examples](https://onlinelibrary.wiley.com/doi/book/10.1002/9781118309728), by Pong P. Chu.
+
+    Performance Comparison
+    ===========================
+    First, we are going to two functions: **calc_gcd_hw** (in line 88-103) and **calc_gcd_sw** (in line 39-86).
+    The function **calc_gcd_hw** is similar to the implementation in the previous tutorial.
+    It calculates GCD using the GCD core.
+    The difference is that in this function we read the perfromance counter, in line 100.
+    The function **calc_gcd_sw** implements the software GCD.
+    It is similar to the C code in tutorial part 1.
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C linenumbers
+    // Author: Erwin Ouyang
+    // Date  : 5 Feb 2019
+    
+    #include <stdio.h>
+    #include <stdint.h>
+    #include <stdlib.h>
+    
+    unsigned int calc_gcd_sw(unsigned int a, unsigned int b, unsigned int *clks);
+    unsigned int calc_gcd_hw(unsigned int a, unsigned int b, unsigned int *clks);
+    
+    int main()
+    {
+        unsigned int a, b;
+        unsigned int r_sw, r_hw;
+        unsigned int sw_clks, total_sw_clks;
+        unsigned int hw_clks, total_hw_clks;
+        unsigned int samples = 10000;
+    
+        printf("HW/SW comparison of GCD algorithm:\n");
+        for (int i = 0; i < samples; i++)
+        {
+            a = rand() + 1;
+            b = rand() + 1;
+            r_sw = calc_gcd_sw(a, b, &sw_clks);
+            r_hw = calc_gcd_hw(a, b, &hw_clks);
+            if (r_sw != r_hw)
+                printf("Inconsistency: gcd(%d,%d)=%d/%d\n", a, b, r_sw, r_hw);
+            total_sw_clks += sw_clks;
+            total_hw_clks += hw_clks;
+        }
+        printf("Average clocks (software/hardware) = %d/%d\n",
+                total_sw_clks/samples, total_hw_clks/samples);
+        printf("Hardware accelerator speed up = %.2f\n",
+                (double)total_sw_clks/total_hw_clks);
+    
+        return 0;
+    }
+    
+    unsigned int calc_gcd_sw(unsigned int a, unsigned int b, unsigned int *clks)
+    {
+        uint32_t *perf_cnt_p;
+        uint8_t n = 0;
+        unsigned int overhead;
+    
+        // Initialize pointer to AXI performance counter
+        perf_cnt_p = (uint32_t *)0x42000000;
+    
+        // *** Determine the overhead of accessing the AXI performance counter ***
+        *(perf_cnt_p+0) = 0x1;	// Start
+        *(perf_cnt_p+0) = 0x2;	// Stop
+        overhead = *(perf_cnt_p+1);
+    
+        // *** Start actual measurement ***
+        *(perf_cnt_p+0) = 0x1;	// Start
+        while (1)
+        {
+            if (a == b)
+                break;
+            if ((a % 2) == 0)		// a even
+            {
+                a = a >> 1;
+                if ((b % 2) == 0)	// b even
+                {
+                    b = b >> 1;
+                    n++;
+                }
+            }
+            else					// a odd
+            {
+                if ((b % 2) == 0)	// b even
+                    b = b >> 1;
+                else				// b odd
+                {
+                    if (a > b)
+                        a = a - b;
+                    else
+                        b = b - a;
+                }
+            }
+        }
+        a = a << n;
+        *(perf_cnt_p+0) = 0x2;	// Stop
+        *clks = *(perf_cnt_p+1) - overhead;		// Read performance counter
+    
+        return a;
+    }
+    
+    unsigned int calc_gcd_hw(unsigned int a, unsigned int b, unsigned int *clks)
+    {
+        uint32_t *gcd_p;
+    
+        // Initialize pointer to AXI GCD
+        gcd_p = (uint32_t *)0x41000000;
+    
+        // *** Calculate hardware GCD ***
+        *(gcd_p+1) = a;
+        *(gcd_p+2) = b;
+        *(gcd_p+0) = 0x1;	// Start
+        while (!(*(gcd_p+0) & (1 << 1)));	// Wait until done flag is set
+        *clks = *(gcd_p+4);					// Read performance counter
+    
+        return *(gcd_p+3);
+    }
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [lst:main_c]: C program for measuring the performance of GCD core]
+
+    How the code works:
+    * First, in main function, we do 10000 GCD calculations both in hardware and software.
+    * In line 26, we check whether the results from hardware are the same with the results from software or not.
+    * In line 28-29, we accumulate the clock cycles from the performance counter both for hardware and software GCD.
+    * We measure the clock cycles of software GCD by using the performance counter. It is done by taking two time stamps, before and after executing the function **calc_gcd_sw**, as shown in line 54-82.
+    * In line 49-51, we calculates the overhead associated with the execution of the C code for accessing the performance counter, and we subtract it from the final counter value.
+    * Finally, in line 31-34, we print the average number of clock cycles and the accelerator speed up to the SDK terminal.
+    
+    Figure [fig:com_terminal_perf] shows the result from the SDK terminal.
+
+    ![Figure [fig:com_terminal_perf]: The result of GCD performance on the SDK terminal](com_terminal_perf.jpg width=700px)
+
+    Summary
+    ===========================
+    In this tutorial, we have built the C program for comparing the performance of the hardware GCD and software GCD.
+    We use performance counter to count how many clock cycles does it takes to do the GCD calculation for both hardware and software.
+    Finally, we calculates the average clock cycles and accelerator speed up.
+
+    <link href='https://fonts.googleapis.com/css?family=Roboto:400,300,100,100italic,300italic,400italic,700' rel='stylesheet' type='text/css'>
+    <script>window.markdeepOptions = {'tocStyle':'long'};</script>
+    <script src="../../markdeep.min.js"></script>
+    <script>window.alreadyProcessedMarkdeep||(document.body.style.visibility="visible")</script>
+</body>

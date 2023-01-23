@@ -1,0 +1,113 @@
+<head>
+    <meta charset="utf-8" lang="en">
+    <link rel="icon" href="../../logo.png">
+    <style class="fallback">
+    body {
+        visibility: hidden;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    </style>
+</head> 
+<body>
+    **Part 7 Interfacing LCD16x2**
+    **by [Erwin Setiawan](https://yohanes-erwin.github.io/)**
+    
+    <center>**[STM32F103 SPL Tutorial](../index.html)**</center>
+
+    LCD16x2
+    ===========================
+    LCD16x2 is a popular display module and commonly used in various devices.
+    In this tutorial, I will explain about how to use LCD16x2 with STM32F103 microcontroller.
+    To interface the LCD with STM32F103, you need the library files (lcd16x2.h and lcd16x2.c).
+    You can get the library files and from [here](https://github.com/yohanes-erwin/stm32f103-keil/tree/master/lcd16x2).
+
+    ![](stm32f103_lcd16x2.jpg width=700px)
+
+    LCD16x2 Library
+    ===========================
+    In this library, we can configure the GPIO for LCD in lcd16x2.h file.
+    This definitions (in source code below) in lcd16x2.h contain the GPIO configuration for the LCD.
+    In this definitions, you can configure the GPIO for LCD control lines (RS, RW, EN) and LCD data lines (D4-D7).
+    This library only support 4-bit data mode.
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~ C linenumbers
+    // LCD control lines (must be on the same port) 
+    #define LCD16X2_RCC_GPIO_CONTROL   RCC_APB2Periph_GPIOB
+    #define LCD16X2_GPIO_CONTROL       GPIOB
+    #define LCD16X2_GPIO_RS            GPIOB
+    #define LCD16X2_GPIO_RW            GPIOB
+    #define LCD16X2_GPIO_EN            GPIOB
+    // LCD data lines (must be on the same port)
+    #define LCD16X2_RCC_GPIO_DATA      RCC_APB2Periph_GPIOA
+    #define LCD16X2_GPIO_DATA          GPIOA
+    #define LCD16X2_GPIO_D4            GPIOA
+    #define LCD16X2_GPIO_D5            GPIOA
+    #define LCD16X2_GPIO_D6            GPIOA
+    #define LCD16X2_GPIO_D7            GPIOA
+    // Pin definition
+    #define LCD16X2_PIN_RS             GPIO_Pin_12
+    #define LCD16X2_PIN_RW             GPIO_Pin_13
+    #define LCD16X2_PIN_EN             GPIO_Pin_14
+    #define LCD16X2_PIN_D4             GPIO_Pin_8     // 4-bit mode LSB
+    #define LCD16X2_PIN_D5             GPIO_Pin_9
+    #define LCD16X2_PIN_D6             GPIO_Pin_10
+    #define LCD16X2_PIN_D7             GPIO_Pin_11    // 4-bit mode MSB
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    Example Code
+    ===========================
+    To use this library, in the main.c file, you must call lcd16x2_init() function.
+    There are 5 parameters for this function that can be used, depending on what type of cursor you want to use:
+    * LCD16X2_DISPLAY_OFF_CURSOR_OFF_BLINK_OFF
+    * LCD16X2_DISPLAY_ON_CURSOR_OFF_BLINK_OFF
+    * LCD16X2_DISPLAY_ON_CURSOR_OFF_BLINK_ON
+    * LCD16X2_DISPLAY_ON_CURSOR_ON_BLINK_OFF
+    * LCD16X2_DISPLAY_ON_CURSOR_ON_BLINK_ON
+    This library is also support custom character display.
+    This code below is an example how to use the library for displaying a string and also a custom character.
+    The custom character is created by defining the pattern.
+    In this example, I use the pattern for battery indicator.
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~ C linenumbers
+    #include "stm32f10x.h"
+    #include "stm32f10x_rcc.h"
+    #include "stm32f10x_gpio.h"
+    #include "delay.h"
+    #include "lcd16x2.h"
+
+    // Custom char data (battery symbol)
+    uint8_t custom_char[] = { 0x0E, 0x1B, 0x11, 0x11, 0x11, 0x11, 0x1F, 0x1F };
+
+    int main(void)
+    {
+        // Delay initialization
+        DelayInit();
+
+        // LCD initialization
+        lcd16x2_init(LCD16X2_DISPLAY_ON_CURSOR_OFF_BLINK_OFF);
+
+        // Create custom char
+        lcd16x2_create_custom_char(0, custom_char);
+
+        while (1)
+        {
+            // Display custom char
+            lcd16x2_put_custom_char(0, 0, 0);
+            lcd16x2_puts(" Battery Low");
+            DelayMs(500);
+            // Clear display
+            lcd16x2_clrscr();
+            DelayMs(500);
+        }
+    }
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    This is the result:
+
+    ![](https://youtu.be/K_HXtgM-RaE)
+
+    <link href='https://fonts.googleapis.com/css?family=Roboto:400,300,100,100italic,300italic,400italic,700' rel='stylesheet' type='text/css'>
+    <script>window.markdeepOptions = {'tocStyle':'long'};</script>
+    <script src="../../markdeep.min.js"></script>
+    <script>window.alreadyProcessedMarkdeep||(document.body.style.visibility="visible")</script>
+</body>

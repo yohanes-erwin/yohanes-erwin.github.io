@@ -1,0 +1,675 @@
+<head>
+    <meta charset="utf-8" lang="en">
+    <link rel="icon" href="../../logo.png">
+    <style class="fallback">
+    body {
+        visibility: hidden;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    </style>
+</head> 
+<body>
+    **Part 2 Wrap the GCD Core with AXI4-Lite Interface**
+    **by [Erwin Setiawan](https://yohanes-erwin.github.io/)**
+    
+    <center>**[Easy FPGA and Embedded Linux on ZYBO](../index.html)**</center>
+
+    Introduction
+    ===========================
+    In the part 1, we have done the RTL simulation of the GCD core.
+    In this part, we are going to create a wrapper module (**axi_gcd_performance.v**) for the GCD core.
+    So, the GCD core can interact with the host CPU (ARM Cortex-A9).
+    We also going to add two counters, the first counter, inside the **axi_gcd_performance.v**, is for benchmarking the hardware GCD core, and the second counter, inside the **axi_performance_counter.v**, is for benchmarking the software GCD implementation.
+    The system diagram for this tutorial is shown in Figure [fig:pl_block].
+
+    ![Figure [fig:pl_block]: System diagram of the PL](pl_block.jpg width=500px)
+
+    You can get the full source code of this part from [here](https://github.com/yohanes-erwin/handsonembedded/tree/master/gcd_accelerator/part_2_axi4_lite_wrapper).
+
+    Counter
+    ===========================
+    The code in Listing [lst:counter] shows the implementation of counter in Verilog.
+    It is a simple counter that counts up if **en=1**, and stops if **en=0**.
+    We can clear the counter back to zero by setting **clr=1**.
+    The counter can count up from 0 to 264-1.
+    Figure [fig:performance_counter] shows the timing diagram of the counter.
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ none linenumbers
+    // Author: Erwin Ouyang
+    // Date  : 3 Feb 2019
+    
+    `timescale 1ns / 1ps
+    
+    module counter
+        #(
+            parameter CNT_WIDTH = 64
+        )
+        (
+            input              clk,
+            input              rst_n,
+            input              clr,
+            input              en,
+            output [CNT_WIDTH-1:0] q
+        );
+        
+        reg [CNT_WIDTH-1:0] q_reg;
+        
+        assign q = q_reg;
+        
+        always @(posedge clk)
+        begin
+            if (!rst_n || clr)
+            begin
+                q_reg <= 0;
+            end
+            else if (en)
+            begin
+                q_reg <= q_reg + 1;
+            end
+        end
+        
+    endmodule
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [lst:counter]: Verilog code of counter.v]
+
+    ![Figure [fig:performance_counter]: Timing diagram of the counter](performance_counter.png width=500px)
+
+    AXI GCD Performance
+    ===========================
+    Now that we already have the **gcd_core.v** and **counter.v**.
+    The next step is to create AXI4-Lite wrapper.
+    We are going to create two wrapper, the first wrapper (**axi_gcd_performance.v**)is for **gcd_core.v** and **counter.v**,
+    and the second wrapper (**axi_performance_counter.v**) is for **counter.v**.
+
+    The block diagram of the axi_gcd_performance.v is shown in Figure [fig:axi_gcd_performace].
+    The counter inside the axi_gcd_performance.v starts when the GCD operation is initiated and stops when the operation is done.
+    The Verilog code in Listing [lst:axi_gcd_performace] is for the first wrapper.
+
+    ![Figure [fig:axi_gcd_performace]: Block diagram of the axi_gcd_performance.v](axi_gcd_performace.jpg width=700px)
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ none linenumbers
+    // Author: Erwin Ouyang
+    // Date  : 5 Feb 2019
+    
+    `timescale 1ns / 1ps
+    
+    module axi_gcd_performance
+        (
+            // ### Clock and reset signals #########################################
+            input  wire        aclk,
+            input  wire        aresetn,
+            // ### AXI4-lite slave signals #########################################
+            // *** Write address signals ***
+            output wire        s_axi_awready,
+            input  wire [31:0] s_axi_awaddr,
+            input  wire        s_axi_awvalid,
+            // *** Write data signals ***
+            output wire        s_axi_wready,
+            input  wire [31:0] s_axi_wdata,
+            input  wire [3:0]  s_axi_wstrb,
+            input  wire        s_axi_wvalid,
+            // *** Write response signals ***
+            input  wire        s_axi_bready,
+            output wire [1:0]  s_axi_bresp,
+            output wire        s_axi_bvalid,
+            // *** Read address signals ***
+            output wire        s_axi_arready,
+            input  wire [31:0] s_axi_araddr,
+            input  wire        s_axi_arvalid,
+            // *** Read data signals ***	
+            input  wire        s_axi_rready,
+            output wire [31:0] s_axi_rdata,
+            output wire [1:0]  s_axi_rresp,
+            output wire        s_axi_rvalid
+            // ### User signals ####################################################
+        );
+    
+        // ### Register map ########################################################
+        // 0x00: start and ready
+        //       bit 0 = START (R/W)
+        //       bit 1 = READY (R)
+        // 0x04: input a
+        //       bit 31~0 = A[31:0] (R/W)
+        // 0x08: input b
+        //       bit 31~0 = B[31:0] (R/W)
+        // 0x0c: output r
+        //       bit 31~0 = R[31:0] (R)
+        // 0x10: performance counter value
+        //       bit 31~0 = CNT[31:0] (R)
+        localparam C_ADDR_BITS = 8;
+        // *** Address ***
+        localparam C_ADDR_CTRL = 8'h00,
+                   C_ADDR_INPA = 8'h04,
+                   C_ADDR_INPB = 8'h08,
+                   C_ADDR_OUTR = 8'h0c,
+                   C_ADDR_CNT = 8'h10;
+        // *** AXI write FSM ***
+        localparam S_WRIDLE = 2'd0,
+                   S_WRDATA = 2'd1,
+                   S_WRRESP = 2'd2;
+        // *** AXI read FSM ***
+        localparam S_RDIDLE = 2'd0,
+                   S_RDDATA = 2'd1;
+        
+        // *** AXI write ***
+        reg [1:0] wstate_cs, wstate_ns;
+        reg [C_ADDR_BITS-1:0] waddr;
+        wire [31:0] wmask;
+        wire aw_hs, w_hs;
+        // *** AXI read ***
+        reg [1:0] rstate_cs, rstate_ns;
+        wire [C_ADDR_BITS-1:0] raddr;
+        reg [31:0] rdata;
+        wire ar_hs;
+        // *** Control registers ***
+        reg start_reg;
+        wire ready_w;
+        reg [31:0] a_reg;
+        reg [31:0] b_reg;
+        wire [31:0] r_w;
+        // *** Performance counter ***
+        wire done_w;
+        wire clr_w, en_w;
+        wire [31:0] q_w;
+        
+        // ### AXI write ###########################################################
+        assign s_axi_awready = (wstate_cs == S_WRIDLE);
+        assign s_axi_wready = (wstate_cs == S_WRDATA);
+        assign s_axi_bresp = 2'b00;    // OKAY
+        assign s_axi_bvalid = (wstate_cs == S_WRRESP);
+        assign wmask = {{8{s_axi_wstrb[3]}}, {8{s_axi_wstrb[2]}}, {8{s_axi_wstrb[1]}}, {8{s_axi_wstrb[0]}}};
+        assign aw_hs = s_axi_awvalid & s_axi_awready;
+        assign w_hs = s_axi_wvalid & s_axi_wready;
+    
+        // *** Write state register ***
+        always @(posedge aclk)
+        begin
+            if (!aresetn)
+                wstate_cs <= S_WRIDLE;
+            else
+                wstate_cs <= wstate_ns;
+        end
+        
+        // *** Write state next ***
+        always @(*)
+        begin
+            case (wstate_cs)
+                S_WRIDLE:
+                    if (s_axi_awvalid)
+                        wstate_ns = S_WRDATA;
+                    else
+                        wstate_ns = S_WRIDLE;
+                S_WRDATA:
+                    if (s_axi_wvalid)
+                        wstate_ns = S_WRRESP;
+                    else
+                        wstate_ns = S_WRDATA;
+                S_WRRESP:
+                    if (s_axi_bready)
+                        wstate_ns = S_WRIDLE;
+                    else
+                        wstate_ns = S_WRRESP;
+                default:
+                    wstate_ns = S_WRIDLE;
+            endcase
+        end
+        
+        // *** Write address register ***
+        always @(posedge aclk)
+        begin
+            if (aw_hs)
+                waddr <= s_axi_awaddr[C_ADDR_BITS-1:0];
+        end
+        
+        // ### AXI read ############################################################
+        assign s_axi_arready = (rstate_cs == S_RDIDLE);
+        assign s_axi_rdata = rdata;
+        assign s_axi_rresp = 2'b00;    // OKAY
+        assign s_axi_rvalid = (rstate_cs == S_RDDATA);
+        assign ar_hs = s_axi_arvalid & s_axi_arready;
+        assign raddr = s_axi_araddr[C_ADDR_BITS-1:0];
+        
+        // *** Read state register ***
+        always @(posedge aclk)
+        begin
+            if (!aresetn)
+                rstate_cs <= S_RDIDLE;
+            else
+                rstate_cs <= rstate_ns;
+        end
+    
+        // *** Read state next ***
+        always @(*) 
+        begin
+            case (rstate_cs)
+                S_RDIDLE:
+                    if (s_axi_arvalid)
+                        rstate_ns = S_RDDATA;
+                    else
+                        rstate_ns = S_RDIDLE;
+                S_RDDATA:
+                    if (s_axi_rready)
+                        rstate_ns = S_RDIDLE;
+                    else
+                        rstate_ns = S_RDDATA;
+                default:
+                    rstate_ns = S_RDIDLE;
+            endcase
+        end
+        
+        // *** Read data register ***
+        always @(posedge aclk)
+        begin
+            if (!aresetn)
+                rdata <= 0;
+            else if (ar_hs)
+                case (raddr)
+                    C_ADDR_CTRL: 
+                        rdata <= {{30{1'b0}}, ready_w, start_reg};
+                    C_ADDR_INPA:
+                        rdata <= a_reg[31:0];
+                    C_ADDR_INPB:
+                        rdata <= b_reg[31:0];
+                    C_ADDR_OUTR:
+                        rdata <= r_w[31:0];
+                    C_ADDR_CNT:
+                        rdata <= q_w[31:0];		
+                endcase
+        end
+        
+        // ### Control registers ###################################################
+        // *** GCD core *** 
+        gcd_core gcd_core_0
+        (
+            .clk(aclk),
+            .rst_n(aresetn),
+            .start(start_reg),
+            .a(a_reg),
+            .b(b_reg),
+            .done(done_w),
+            .ready(ready_w),
+            .r(r_w)
+        );
+        
+        // *** Counter ***
+        counter
+        #(
+            .CNT_WIDTH(32)
+        )
+        counter_0
+        (
+            .clk(aclk),
+            .rst_n(aresetn),
+            .clr(clr_w),
+            .en(en_w),
+            .q(q_w)
+        );
+        assign clr_w = start_reg;
+        assign en_w = ~ready_w;
+        
+        // *** Start register ***
+        always @(posedge aclk)
+        begin
+            if (!aresetn)
+            begin
+                start_reg <= 0;
+            end
+            else if (w_hs && waddr == C_ADDR_CTRL && s_axi_wdata[0])
+            begin
+                start_reg <= 1;
+            end
+            else
+            begin
+                start_reg <= 0;
+            end
+        end
+    
+        // *** Register a and b ***
+        always @(posedge aclk)
+        begin
+            if (!aresetn)
+            begin
+                a_reg[31:0] <= 0;
+                b_reg[31:0] <= 0;
+            end
+            else if (w_hs && waddr == C_ADDR_INPA)
+            begin
+                a_reg[31:0] <= (s_axi_wdata[31:0] & wmask) | (a_reg[31:0] & ~wmask);
+            end
+            else if (w_hs && waddr == C_ADDR_INPB)
+            begin
+                b_reg[31:0] <= (s_axi_wdata[31:0] & wmask) | (b_reg[31:0] & ~wmask);
+            end
+        end
+    
+    endmodule
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [lst:axi_gcd_performace]: Verilog code of axi_gcd_performance.v]
+
+    AXI4-Lite Protocol
+    ---------------------------
+    AXI4 (Advanced eXtensible Interface version 4) is part of the ARM AMBA bus architecture.
+    It is a multi-master, multi-slave communication protocol, mainly designed for on-chip communication.
+    There are three types of AXI4 bus that are commonly used in Xilinx, which are AXI4 (AXI4-Full), AXI4-Lite, and AXI4-Stream.
+    Both AXI4 and AXI4-Lite are memory-mapped interface, while AXI4-Stream is stream interface. AXI4-Lite is a subset of AXI4.
+    In this tutorial, we are going to use the AXI4-Lite interface.
+
+    AXI4-Lite has five channels as follows:
+    * Read Address channel (AR) (__s_axi_ar*__)
+    * Read Data channel (R) (__s_axi_r*__)
+    * Write Address channel (AW) (__s_axi_aw*__)
+    * Write Data channel (W) (__s_axi_w*__)
+    * Write Response channel (B) (__s_axi_b*__)
+    
+    In the Listing [lst:axi_gcd_performace] line 13-33, it declares all of the AXI4-Lite signals.
+
+    Register Map
+    ---------------------------
+    The host CPU (ARM Cortex-A9) interacts with the GCD core by using memory-mapped access.
+    From the C program point of view, the program should know the memory-mapped address (base address) of the GCD core.
+    Then, the base address is declared as a pointer.
+    Hence, the program can interact to the GCD core by writing/reading values to or from the pointer.
+    
+    The registers, offset address, and fileds are:
+    * (offset 0, 0x00): status register
+        * bit 1 = **READY** (R), bit 0 = **START** (R/W)
+    * (offset 1, 0x04): register a
+        * bit 31~0 = **A**[31:0] (R/W)
+    * (offset 2, 0x08): register b
+        * bit 31~0 = **B**[31:0] (R/W)
+    * (offset 3, 0x0C): output r
+        * bit 31~0 = **R**[31:0] (R)
+    * (offset 4, 0x10): performance counter value
+        * bit 31~0 = **CNT**[31:0] (R)
+    
+    The memory mapped registers are implemented in Listing [lst:axi_gcd_performace] in line 221-253.
+
+    Read and Write Controllers
+    ---------------------------
+    Read and write controllers are basically finite state machine (FSM) that implements the AXI4-Lite protocol.
+    These controllers interact with the CPU (via AXI4 interconnect).
+    Through this controller, the CPU can write or read data to or from the memory map registers.
+
+    Figure [fig:axi_write] shows the timing and FSM diagram of the AXI4-Lite write controller.
+    The code for this implementation is in Listing [lst:axi_gcd_performace] in line 85-132.
+
+    ![Figure [fig:axi_write]: Timing and FSM diagram of the AXI4-Lite write controller](axi_write.jpg width=700px)
+
+    Figure [fig:axi_read] shows the timing and FSM diagram of the AXI4-Lite read controller.
+    The code for this implementation is in Listing [lst:axi_gcd_performace] in line 135-188.
+    
+    ![Figure [fig:axi_read]: Timing and FSM diagram of the AXI4-Lite read controller](axi_read.jpg width=700px)
+
+    In Listing [lst:axi_gcd_performace] in line 192-216, we instantiate the GCD core and counter.
+
+    AXI Performance Counter
+    ===========================
+    The second wrapper is for the software GCD performance counter (axi_preformance_counter.v).
+    Figure [fig:axi_performance_counter] shows the block diagram of the second wrapper.
+    The Verilog code in Listing [lst:axi_performance_counter] is for the second wrapper.
+
+    ![Figure [fig:axi_performance_counter]: Block diagram of the axi_performance_counter.v](axi_performace_counter.jpg width=700px)
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ none linenumbers
+    // Author: Erwin Ouyang
+    // Date  : 3 Feb 2019
+    
+    `timescale 1ns / 1ps
+    
+    module axi_performance_counter
+        (
+            // ### Clock and reset signals #########################################
+            input  wire        aclk,
+            input  wire        aresetn,
+            // ### AXI4-lite slave signals #########################################
+            // *** Write address signals ***
+            output wire        s_axi_awready,
+            input  wire [31:0] s_axi_awaddr,
+            input  wire        s_axi_awvalid,
+            // *** Write data signals ***
+            output wire        s_axi_wready,
+            input  wire [31:0] s_axi_wdata,
+            input  wire [3:0]  s_axi_wstrb,
+            input  wire        s_axi_wvalid,
+            // *** Write response signals ***
+            input  wire        s_axi_bready,
+            output wire [1:0]  s_axi_bresp,
+            output wire        s_axi_bvalid,
+            // *** Read address signals ***
+            output wire        s_axi_arready,
+            input  wire [31:0] s_axi_araddr,
+            input  wire        s_axi_arvalid,
+            // *** Read data signals ***	
+            input  wire        s_axi_rready,
+            output wire [31:0] s_axi_rdata,
+            output wire [1:0]  s_axi_rresp,
+            output wire        s_axi_rvalid
+        );
+    
+        // ### Register map ########################################################
+        // 0x00: start and stop
+        //       bit 0 = START (R/W)
+        //       bit 1 = STOP (R/W)
+        // 0x04: counter low value
+        //       bit 31~0 = Q[31:0] (R)
+        // 0x08: counter high value
+        //       bit 31~0 = Q[63:32] (R)
+        localparam C_ADDR_BITS = 8;
+        // *** Address ***
+        localparam C_ADDR_CTRL = 8'h00,
+                   C_ADDR_CNTL = 8'h04,
+                   C_ADDR_CNTH = 8'h08;
+        // *** AXI write FSM ***
+        localparam S_WRIDLE = 2'd0,
+                   S_WRDATA = 2'd1,
+                   S_WRRESP = 2'd2;
+        // *** AXI read FSM ***
+        localparam S_RDIDLE = 2'd0,
+                   S_RDDATA = 2'd1;
+        
+        // *** AXI write ***
+        reg [1:0] wstate_cs, wstate_ns;
+        reg [C_ADDR_BITS-1:0] waddr;
+        wire [31:0] wmask;
+        wire aw_hs, w_hs;
+        // *** AXI read ***
+        reg [1:0] rstate_cs, rstate_ns;
+        wire [C_ADDR_BITS-1:0] raddr;
+        reg [31:0] rdata;
+        wire ar_hs;
+        // *** Control registers ***
+        reg start_reg, stop_reg;
+        reg clr_reg, en_reg;
+        wire [63:0] q_w;
+        
+        // ### AXI write ###########################################################
+        assign s_axi_awready = (wstate_cs == S_WRIDLE);
+        assign s_axi_wready = (wstate_cs == S_WRDATA);
+        assign s_axi_bresp = 2'b00;    // OKAY
+        assign s_axi_bvalid = (wstate_cs == S_WRRESP);
+        assign wmask = {{8{s_axi_wstrb[3]}}, {8{s_axi_wstrb[2]}}, {8{s_axi_wstrb[1]}}, {8{s_axi_wstrb[0]}}};
+        assign aw_hs = s_axi_awvalid & s_axi_awready;
+        assign w_hs = s_axi_wvalid & s_axi_wready;
+    
+        // *** Write state register ***
+        always @(posedge aclk)
+        begin
+            if (!aresetn)
+                wstate_cs <= S_WRIDLE;
+            else
+                wstate_cs <= wstate_ns;
+        end
+        
+        // *** Write state next ***
+        always @(*)
+        begin
+            case (wstate_cs)
+                S_WRIDLE:
+                    if (s_axi_awvalid)
+                        wstate_ns = S_WRDATA;
+                    else
+                        wstate_ns = S_WRIDLE;
+                S_WRDATA:
+                    if (s_axi_wvalid)
+                        wstate_ns = S_WRRESP;
+                    else
+                        wstate_ns = S_WRDATA;
+                S_WRRESP:
+                    if (s_axi_bready)
+                        wstate_ns = S_WRIDLE;
+                    else
+                        wstate_ns = S_WRRESP;
+                default:
+                    wstate_ns = S_WRIDLE;
+            endcase
+        end
+        
+        // *** Write address register ***
+        always @(posedge aclk)
+        begin
+            if (aw_hs)
+                waddr <= s_axi_awaddr[C_ADDR_BITS-1:0];
+        end
+        
+        // ### AXI read ############################################################
+        assign s_axi_arready = (rstate_cs == S_RDIDLE);
+        assign s_axi_rdata = rdata;
+        assign s_axi_rresp = 2'b00;    // OKAY
+        assign s_axi_rvalid = (rstate_cs == S_RDDATA);
+        assign ar_hs = s_axi_arvalid & s_axi_arready;
+        assign raddr = s_axi_araddr[C_ADDR_BITS-1:0];
+        
+        // *** Read state register ***
+        always @(posedge aclk)
+        begin
+            if (!aresetn)
+                rstate_cs <= S_RDIDLE;
+            else
+                rstate_cs <= rstate_ns;
+        end
+    
+        // *** Read state next ***
+        always @(*) 
+        begin
+            case (rstate_cs)
+                S_RDIDLE:
+                    if (s_axi_arvalid)
+                        rstate_ns = S_RDDATA;
+                    else
+                        rstate_ns = S_RDIDLE;
+                S_RDDATA:
+                    if (s_axi_rready)
+                        rstate_ns = S_RDIDLE;
+                    else
+                        rstate_ns = S_RDDATA;
+                default:
+                    rstate_ns = S_RDIDLE;
+            endcase
+        end
+        
+        // *** Read data register ***
+        always @(posedge aclk)
+        begin
+            if (!aresetn)
+                rdata <= 0;
+            else if (ar_hs)
+                case (raddr)
+                    C_ADDR_CTRL: 
+                        rdata <= {{30{1'b1}}, stop_reg, start_reg};
+                    C_ADDR_CNTL:
+                        rdata <= q_w[31:0];
+                    C_ADDR_CNTH:
+                        rdata <= q_w[63:32];			
+                endcase
+        end
+        
+        // ### Control registers ###################################################
+        assign clr = clr_reg;
+        assign en = en_reg;
+        
+        // *** Counter instantiation ***
+        counter
+        #(
+            .CNT_WIDTH(64)
+        )
+        counter_0
+        (
+            .clk(aclk),
+            .rst_n(aresetn),
+            .clr(clr_reg),
+            .en(en_reg),
+            .q(q_w)
+        );
+        
+        // *** Start, stop, and clear register ***
+        always @(posedge aclk)
+        begin
+            if (!aresetn)
+            begin
+                start_reg <= 0;
+                stop_reg <= 0;
+                clr_reg <= 0;
+            end
+            else if (w_hs && waddr == C_ADDR_CTRL && s_axi_wdata[0])
+            begin
+                start_reg <= 1;
+                clr_reg <= 1;
+            end
+            else if (w_hs && waddr == C_ADDR_CTRL && s_axi_wdata[1])
+            begin
+                stop_reg <= 1;
+            end
+            else
+            begin
+                start_reg <= 0;
+                stop_reg <= 0;
+                clr_reg <= 0;
+            end
+        end
+    
+        // *** Counter enable signal ***
+        always @(posedge aclk)
+        begin
+            if (!aresetn)
+            begin
+                en_reg <= 0;
+            end
+            else if (start_reg)
+            begin
+                en_reg <= 1;
+            end
+            else if (stop_reg)
+            begin
+                en_reg <= 0;
+            end
+        end      
+    
+    endmodule
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [lst:axi_performance_counter]: Verilog code of axi_performance_counter.v]
+
+    Register Map
+    ---------------------------
+    The registers, offset address, and fileds for of the second wrapper are:
+
+    * (offset 0, 0x00): controlregister
+        * bit 1 = **STOP** (R/W), bit 0 = **START** (R/W)
+    * (offset 1, 0x04): counter value low
+        * bit 31~0 = **Q**[31:0] (R)
+    * (offset 2, 0x08): counter value high
+        * bit 31~0 = **Q**[63:32] (R)
+    
+    The control register is implemented in Listing [lst:axi_performance_counter] in line 192-215.
+
+    Summary
+    ===========================
+    In this tutorial, we have built AXI4-Lite wrapper module that wraps the GCD core and counters.
+    This wrapper modules enable the CPU (ARM Cortex-A9) to interact with the GCD core and counter through the AXI4-Lite protocol.
+    The CPU sees the GCD core and counter as memory-mapped peripherals.
+    Furthermore, in C program, it is accessible through pointers.
+
+    <link href='https://fonts.googleapis.com/css?family=Roboto:400,300,100,100italic,300italic,400italic,700' rel='stylesheet' type='text/css'>
+    <script>window.markdeepOptions = {'tocStyle':'long'};</script>
+    <script src="../../markdeep.min.js"></script>
+    <script>window.alreadyProcessedMarkdeep||(document.body.style.visibility="visible")</script>
+</body>
